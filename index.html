@@ -765,8 +765,22 @@ function pushUndo(kind, brk) {
 }
 function restore(x) { ed.innerHTML = x.h; removeBreaks(); clean(); if (x.s) setSel(clampSel(x.s)); deriveFromCaret(true); }
 let strikeFloor = null;
-function undo() { if (!undoStack.length) return; if (undoStack[undoStack.length - 1] === strikeFloor) { toast("Can't undo past a strike."); blip('n', true); return; } redoStack.push(snap()); restore(undoStack.pop()); lastKind = null; changed(); }
-function redo() { if (!redoStack.length) return; undoStack.push(snap()); restore(redoStack.pop()); lastKind = null; changed(); }
+function snapText(h) { const d = document.createElement('div'); d.innerHTML = h; for (const b of d.querySelectorAll('.pgbrk')) b.remove(); return [...d.children].map(p => p.textContent).join('\n'); }
+function flatPos(i) { const ps = paras(); for (let p = 0; p < ps.length; p++) { const L = textOf(ps[p]).length; if (i <= L) return { p, o: i }; i -= L + 1; } const l = ps.length - 1; return { p: l, o: textOf(ps[l]).length }; }
+// undo/redo count as edits: they have to pass the same edit rules and pay the same points
+function historyGate(x) {
+  const rOn = rulesActive(), pOn = ptsActive(); if (!rOn && !pOn) return true;
+  const cur = paras().map(textOf).join('\n'), tgt = snapText(x.h);
+  if (cur === tgt) return true;
+  let i = 0; while (i < cur.length && i < tgt.length && cur[i] === tgt[i]) i++;
+  let j = 0; while (j < cur.length - i && j < tgt.length - i && cur[cur.length - 1 - j] === tgt[tgt.length - 1 - j]) j++;
+  const A = flatPos(i), B = flatPos(cur.length - j), ins = tgt.slice(i, tgt.length - j);
+  if (rOn && ruleBlock(A, B)) { ruleToast("Undo can't get around the edit rules."); blip('n', true); return false; }
+  if (pOn && !ptsCharge(A, B, ins, false)) return false;
+  return true;
+}
+function undo() { if (!undoStack.length) return; if (undoStack[undoStack.length - 1] === strikeFloor) { toast("Can't undo past a strike."); blip('n', true); return; } if (!historyGate(undoStack[undoStack.length - 1])) return; redoStack.push(snap()); restore(undoStack.pop()); lastKind = null; changed(); }
+function redo() { if (!redoStack.length) return; if (!historyGate(redoStack[redoStack.length - 1])) return; undoStack.push(snap()); restore(redoStack.pop()); lastKind = null; changed(); }
 
 /* ---------- mode / pattern ---------- */
 function updateModeUI(pulse) {
