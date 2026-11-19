@@ -217,6 +217,11 @@ body[data-mode="r"]{--mc:#e5534b} body[data-mode="y"]{--mc:#f2c230} body[data-mo
 .foot{justify-content:flex-start}
 .foot #counts{margin-left:auto}
 .runcard{left:12px;right:12px;width:auto;bottom:calc(var(--sb) + 36px)}
+/* ---- caret flag ---- */
+.cflag{position:absolute;z-index:2;left:0;top:0;width:16px;height:20px;border-radius:4px 10px 10px 4px;pointer-events:none;background:var(--fc,#d23a31);box-shadow:0 0 0 2px var(--paper),0 2px 8px -2px var(--fc);transition:top .12s var(--ease),background .25s,box-shadow .25s;opacity:.95}
+.cflag::after{content:attr(data-l);position:absolute;inset:0;display:grid;place-items:center;font:800 10px/1 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.cflag.pop{animation:cflagpop .45s var(--ease)}
+@keyframes cflagpop{0%{scale:1}35%{scale:1.5}100%{scale:1}}
 /* ---- story tray ---- */
 .work{flex:1;min-height:0;display:flex;position:relative}
 .work>.desk{flex:1;min-width:0}
@@ -379,6 +384,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="darechip" id="dare" hidden></div>
   <div class="stage" id="stage"><div class="rail" id="rail"><div class="railbox" id="railbox"></div></div>
   <div class="page" id="page">
+    <div class="cflag" id="cflag" hidden></div>
     <div class="ph" id="ph">Start anywhere.</div>
     <div id="ed" class="doc" contenteditable="true" spellcheck="true" autocapitalize="sentences"><p><br></p></div>
   </div>
@@ -719,7 +725,28 @@ function updateModeUI(pulse) {
   const nx = nextOf(mode);
   $('next').innerHTML = !patSeq() ? '' : `Next sentence: <b style="color:${{ r: '#ff8a82', y: '#ffd65c', g: '#7fd88b', n: '#ccc' }[nx]}">${NAMES[nx]}</b>`;
   if (settings.mode !== mode) { settings.mode = mode; saveSettings(); }
+  placeFlagSoon();
 }
+const FLAGC = { r: '#e0574e', y: '#e7b313', g: '#3fae55', n: '#a59d92' }, FLAGL = { r: 'R', y: 'Y', g: 'G', n: '' };
+let flagQ = 0;
+function placeFlagSoon() { if (!flagQ) flagQ = requestAnimationFrame(() => { flagQ = 0; placeFlag(); }); }
+function placeFlag() {
+  const fl = $('cflag'); if (!fl) return;
+  const cs = getSelection();
+  if (document.activeElement !== ed || !cs.rangeCount || !ed.contains(cs.focusNode)) { fl.hidden = true; return; }
+  const rg = document.createRange(); rg.setStart(cs.focusNode, cs.focusOffset); rg.collapse(true);
+  let r = rg.getClientRects()[0];
+  if (!r) { const el = cs.focusNode.nodeType === 1 ? cs.focusNode : cs.focusNode.parentElement; r = el && el.getBoundingClientRect(); }
+  if (!r || !r.height) { fl.hidden = true; return; }
+  const page = $('page'), pr = page.getBoundingClientRect(), z = zoomEff();
+  const padL = parseFloat(getComputedStyle(page).paddingLeft) || 0, lh = Math.min(r.height / z, 26);
+  fl.hidden = false;
+  fl.style.setProperty('--fc', FLAGC[mode]); fl.dataset.l = FLAGL[mode];
+  fl.style.height = Math.max(14, lh - 4) + 'px';
+  fl.style.top = ((r.top - pr.top) / z + (r.height / z - Math.max(14, lh - 4)) / 2) + 'px';
+  fl.style.left = Math.max(4, padL - 22) + 'px';
+}
+function flagPulse() { const fl = $('cflag'); if (!fl) return; fl.classList.remove('pop'); void fl.offsetWidth; fl.classList.add('pop'); }
 function updateFmtUI() { $('bB').setAttribute('aria-pressed', fmt.b); $('bI').setAttribute('aria-pressed', fmt.i); $('bU').setAttribute('aria-pressed', fmt.u); }
 function setMode(c, opts = {}) {
   const s = getSel();
@@ -733,7 +760,7 @@ function advance(quiet) {
   const seq = patSeq(); if (!seq) return;
   const i = posOfColor(mode); patPos = i < 0 ? 0 : (i + 1) % seq.length;
   mode = seq[patPos];
-  updateModeUI(true); renderLane(true); if (!quiet) blip(mode, true);
+  updateModeUI(true); renderLane(true); if (!quiet) blip(mode, true); flagPulse();
 }
 function charStyleBefore(s) {
   const p = paras()[s.f.p]; if (!p) return null;
@@ -741,13 +768,55 @@ function charStyleBefore(s) {
   for (const r of runs) { if (s.f.o > acc && s.f.o <= acc + r.t.length) return { r, before: textOf(p).slice(0, s.f.o) }; acc += r.t.length; }
   return null;
 }
+// colors of the sentences leading up to the caret (oldest first), last one = the sentence the caret is in
+function sentenceColorsBefore(s, max = 12) {
+  const ps = paras(), out = [];
+  for (let pi = s.f.p; pi >= 0 && pi > s.f.p - 8 && out.length < max; pi--) {
+    const runs = pToRuns(ps[pi]), cols = [];
+    let txt = '';
+    for (const r of runs) { txt += r.t; for (let k = 0; k < r.t.length; k++) cols.push(r.c); }
+    let end = pi === s.f.p ? s.f.o : txt.length;
+    const local = [];
+    let i = 0;
+    const re = /[^.!?…]*(?:[.!?…]+["'”’)\]*_]*|$)/g; let m;
+    while ((m = re.exec(txt.slice(0, end))) && m[0].length) {
+      const k = m.index + m[0].search(/\S/);
+      if (m[0].trim() && k >= 0) local.push(cols[k]);
+    }
+    out.unshift(...local);
+  }
+  return out.slice(-max);
+}
+function inferPatPos(c, s) {
+  const seq = patSeq(); if (!seq) return -1;
+  const L = seq.length, cand = [];
+  for (let p = 0; p < L; p++) if (seq[p] === c) cand.push(p);
+  if (cand.length <= 1) return cand.length ? cand[0] : -1;
+  const hist = sentenceColorsBefore(s); if (hist.length) hist[hist.length - 1] = c;
+  let best = cand[0], bs = -1;
+  for (const p of cand) {
+    let sc = 0;
+    for (let k = 1; k < hist.length; k++) { if (hist[hist.length - 1 - k] === seq[((p - k) % L + L) % L]) sc++; else break; }
+    if (sc > bs || (sc === bs && p === patPos)) { bs = sc; best = p; }
+  }
+  return best;
+}
 function deriveFromCaret(force) {
   const s = getSel(); if (!s || (!collapsed(s) && !force)) return;
   const x = charStyleBefore(s); if (!x) { updateFmtUI(); return; }
   fmt = { b: x.r.b, i: x.r.i, u: x.r.u };
-  let c = x.r.c;
-  if (patSeq() && TERM_SPACE.test(x.before)) c = nextOf(c);
-  if (c !== mode) { mode = c; const sq = patSeq(); if (sq && sq[patPos] !== c && sq.includes(c)) patPos = sq.indexOf(c); updateModeUI(false); }
+  let c = x.r.c, pos = -1;
+  const seq = patSeq();
+  if (seq) {
+    const p0 = inferPatPos(c, s);
+    if (TERM_SPACE.test(x.before)) { pos = p0 < 0 ? -1 : (p0 + 1) % seq.length; c = pos < 0 ? nextOf(c) : seq[pos]; }
+    else pos = p0;
+  }
+  if (c !== mode || (pos >= 0 && pos !== patPos)) {
+    const was = mode; mode = c; if (pos >= 0) patPos = pos;
+    updateModeUI(false); renderLane(false);
+    if (was !== c) flagPulse();
+  }
   updateFmtUI();
 }
 function toggleFmt(k) {
@@ -787,12 +856,13 @@ ed.addEventListener('beforeinput', e => {
   else if (t === 'formatUnderline') { e.preventDefault(); toggleFmt('u'); }
   else if (t.startsWith('format')) e.preventDefault();
   else if ((t === 'deleteContentBackward' || t === 'deleteContentForward') && getSel() && collapsed(getSel())) {
-    e.preventDefault(); pushUndo('del'); deleteChar(t === 'deleteContentBackward'); changed();
+    e.preventDefault(); pushUndo('del'); deleteChar(t === 'deleteContentBackward'); changed(); if (patSeq()) deriveFromCaret(true);
   }
-  else if (t.startsWith('delete')) pushUndo('del', t === 'deleteByCut' || t === 'deleteByDrag');
+  else if (t.startsWith('delete')) { pushUndo('del', t === 'deleteByCut' || t === 'deleteByDrag'); rederive = !!patSeq(); }
   else pushUndo('other', true);
 });
-ed.addEventListener('input', () => { if (composing) return; clean(); changed(); });
+let rederive = false;
+ed.addEventListener('input', () => { if (composing) return; clean(); changed(); if (rederive) { rederive = false; deriveFromCaret(true); } });
 ed.addEventListener('keydown', () => activity());
 ed.addEventListener('compositionstart', () => { composing = true; pushUndo('other', true); });
 ed.addEventListener('compositionend', () => { composing = false; clean(); changed(); });
@@ -810,6 +880,9 @@ document.addEventListener('selectionchange', () => {
   const s = getSelection(); if (!s.rangeCount || !ed.contains(s.focusNode)) return;
   if (s.isCollapsed) deriveFromCaret();
 });
+document.addEventListener('selectionchange', () => placeFlagSoon());
+ed.addEventListener('focus', () => placeFlagSoon()); ed.addEventListener('blur', () => setTimeout(placeFlagSoon, 0));
+addEventListener('resize', () => placeFlagSoon());
 $('page').addEventListener('mousedown', e => {
   if (e.target === $('page') || e.target === $('ph')) {
     e.preventDefault(); ed.focus();
@@ -825,7 +898,7 @@ function changed() {
   setDirty(true);
   clearTimeout(draftT); draftT = setTimeout(pushDraft, 1200);
   clearTimeout(tallyT); tallyT = setTimeout(tally, 250);
-  placeholder(); schedulePages(); activity(); renderRailSoon();
+  placeholder(); schedulePages(); placeFlagSoon(); activity(); renderRailSoon();
 }
 function placeholder() { const ps = paras(); $('ph').hidden = !(ps.length === 1 && !textOf(ps[0]).length); }
 function pushDraft() { saveCurrent(); }
