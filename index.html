@@ -460,7 +460,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="erow"><i style="background:var(--Y)"></i><div class="eseg" data-rc="y"><button data-v="free">Free</button><button data-v="strike">Strike</button><button data-v="alternate">Alternate</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
   <div class="erow"><i style="background:var(--G)"></i><div class="eseg" data-rc="g"><button data-v="free">Free</button><button data-v="strike">Strike</button><button data-v="alternate">Alternate</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
   </div>
-  <p class="ehint" id="ehintRules">Free: edit anything. Strike: finished sentences can't be edited, but you can strike one out (the S button) and write a new version. Alternate: like Strike, but the old version stays as a dotted alternate and your new one goes right after it. Use the S button on either one later to keep it and drop the other. Both treat any stretch of text as a sentence, period or not. Forward: no backspacing or going back in, even on the sentence you're writing. Just keep typing. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
+  <p class="ehint" id="ehintRules">Free: edit anything. Strike: finished sentences can't be edited, but you can strike one out (the S button) and write a new version. Strikes are permanent (you get 5 seconds to undo a slip). Alternate: like Strike, but the old version stays as a dotted alternate and your new one goes right after it. Use the S button on either one later to keep it and drop the other. Both treat any stretch of text as a sentence, period or not. Forward: no backspacing or going back in, even on the sentence you're writing. Just keep typing. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
   <h4 style="margin-top:4px">Edit points</h4>
   <div class="prow" data-pc="r"><i style="background:var(--R)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
   <div class="prow" data-pc="y"><i style="background:var(--Y)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
@@ -751,7 +751,8 @@ function pushUndo(kind, brk) {
   redoStack = []; lastKind = kind; lastAt = now;
 }
 function restore(x) { ed.innerHTML = x.h; removeBreaks(); clean(); if (x.s) setSel(clampSel(x.s)); deriveFromCaret(true); }
-function undo() { if (!undoStack.length) return; redoStack.push(snap()); restore(undoStack.pop()); lastKind = null; changed(); }
+let strikeFloor = null;
+function undo() { if (!undoStack.length) return; if (undoStack[undoStack.length - 1] === strikeFloor) { toast("Can't undo past a strike."); blip('n', true); return; } redoStack.push(snap()); restore(undoStack.pop()); lastKind = null; changed(); }
 function redo() { if (!redoStack.length) return; undoStack.push(snap()); restore(redoStack.pop()); lastKind = null; changed(); }
 
 /* ---------- mode / pattern ---------- */
@@ -991,14 +992,13 @@ function sentAction() {
     setSel(at(pos.p, caret)); flashPara(paras()[pos.p]); blip(x.c, false);
     toast(b > a ? 'Kept this version.' : 'Kept it.');
   } else if (x.x === 's') {
-    pushUndo('style', true);
-    editChars(pos.p, (st, k) => k >= x.s && k < x.e ? { ...st, x: '' } : st);
-    setSel(at(pos.p, x.e)); toast('Brought it back.');
+    toast('Struck stays struck. Write something new.'); blip('n', true); return;
   } else {
     const rule = ruleOf(x.c);
     if (rule !== 'strike' && rule !== 'alternate') { toast(`Set ${NAMES[x.c] || 'this color'} to Strike or Alternate in the edit rules to use this.`); return; }
     pushUndo('style', true);
     editChars(pos.p, (st, k) => k >= x.s && k < x.e ? { ...st, x: rule === 'strike' ? 's' : 'a' } : st);
+    if (rule === 'strike') { const snapObj = undoStack[undoStack.length - 1]; setTimeout(() => { if (undoStack.includes(snapObj)) strikeFloor = snapObj; }, 5000); }
     setSel(at(pos.p, x.e)); flashPara(paras()[pos.p]); blip(x.c, true);
     rw = { p: pos.p, s: x.e, e: x.e };
     if (rule === 'alternate') { if (mode !== x.c) setMode(x.c, { typingOnly: true }); toast('Alternate made. Write the new version right here.'); }
