@@ -220,15 +220,16 @@ body[data-mode="r"]{--mc:#e5534b} body[data-mode="y"]{--mc:#f2c230} body[data-mo
 /* ---- story tray ---- */
 .work{flex:1;min-height:0;display:flex;position:relative}
 .work>.desk{flex:1;min-width:0}
-.tray{flex:none;position:relative;z-index:3;display:flex;flex-direction:column;width:var(--trayw,260px);background:#2a2520;box-shadow:1px 0 0 rgba(255,255,255,.05),8px 0 24px -8px rgba(0,0,0,.45)}
+.tray{flex:none;min-width:0;position:relative;z-index:3;display:flex;flex-direction:column;width:var(--trayw,260px);background:#2a2520;box-shadow:1px 0 0 rgba(255,255,255,.05),8px 0 24px -8px rgba(0,0,0,.45)}
 .tray[hidden]{display:none}
 .tray .railhead{position:static;margin:0;padding:8px 8px 6px;background:none;box-shadow:none;opacity:1;border-radius:0}
 .traybody{flex:1;min-height:0;position:relative;overflow:hidden;margin:0 8px;border-radius:6px;background-color:#efe8db;
   background-image:linear-gradient(rgba(60,45,30,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(60,45,30,.07) 1px,transparent 1px);background-size:24px 24px;box-shadow:inset 0 0 0 1px rgba(60,45,30,.2)}
 .tray.whole .traybody{cursor:pointer}
+.traybody{touch-action:none}
 #traygraph,#traygraph svg{position:absolute;inset:0;display:block;width:100%;height:100%}
 .traybody .rcard{position:absolute;left:6px;right:6px;zoom:var(--tz,1)}
-.trayfoot{display:flex;align-items:center;gap:3px;padding:6px 8px 8px;white-space:nowrap}
+.trayfoot{display:flex;align-items:center;gap:3px;padding:6px 8px 8px;white-space:nowrap;overflow:hidden}
 .trayfoot button{flex:none;white-space:nowrap;height:24px;min-width:24px;padding:0 7px;border-radius:7px;font:600 11px ui-monospace,Consolas,monospace;color:var(--dim);background:rgba(255,255,255,.06)}
 .trayfoot button:hover{background:rgba(255,255,255,.12);color:var(--cream)}
 .trayfoot button.on{background:rgba(255,255,255,.16);color:var(--cream)}
@@ -1756,7 +1757,8 @@ function removeBeat(id) {
   clean(); changed(); renderRail();
 }
 function trayCfg() {
-  const t = settings.tray = Object.assign({ w: 116, z: 1, mode: 'follow', min: false }, settings.tray || {});
+  const t = settings.tray = (settings.tray && typeof settings.tray === 'object') ? settings.tray : {};
+  for (const [k, v] of Object.entries({ w: 116, z: 1, mode: 'follow', min: false })) if (t[k] === undefined) t[k] = v;
   t.w = Math.max(80, Math.min(240, +t.w || 116)); t.z = Math.max(0.7, Math.min(1.8, +t.z || 1));
   return t;
 }
@@ -1968,15 +1970,27 @@ $('traybody').addEventListener('wheel', e => {
   $('desk').scrollTop += (t.mode === 'whole' || t.min) ? e.deltaY * (pr.height / H) * 0.5 : e.deltaY;
 }, { passive: false });
 $('traybody').addEventListener('pointerdown', e => {
-  const t = trayCfg(); if (!(t.mode === 'whole' || t.min) || e.target.closest('.rcard')) return;
+  const t = trayCfg(); if (e.target.closest('.rcard')) return;
+  if (!(t.mode === 'whole' || t.min)) {
+    // follow mode: drag the paper to scroll the story with it
+    if (e.pointerType === 'mouse') return;
+    let ly = e.clientY;
+    const pan = ev => { $('desk').scrollTop -= ev.clientY - ly; ly = ev.clientY; };
+    const end = () => { removeEventListener('pointermove', pan); removeEventListener('pointerup', end); removeEventListener('pointercancel', end); };
+    addEventListener('pointermove', pan); addEventListener('pointerup', end); addEventListener('pointercancel', end);
+    return;
+  }
   e.preventDefault();
+  // grabbing the visible-area box drags it from where you grabbed; elsewhere jumps there first
+  const vp = $('traygraph').querySelector('.vp'), vr = vp && vp.getBoundingClientRect();
+  const off = vr && e.clientY >= vr.top && e.clientY <= vr.bottom ? e.clientY - (vr.top + vr.height / 2) : 0;
   const go = ev => {
     const b = $('traybody').getBoundingClientRect(), pr = $('page').getBoundingClientRect(), dk = $('desk').getBoundingClientRect();
-    const f = Math.max(0, Math.min(1, (ev.clientY - b.top - 8) / (b.height - 16)));
+    const f = Math.max(0, Math.min(1, (ev.clientY - off - b.top - 8) / (b.height - 16)));
     $('desk').scrollTop += (pr.top + f * pr.height) - (dk.top + dk.height / 2);
   };
-  go(e);
-  const up = () => { removeEventListener('pointermove', go); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+  go(e); document.body.classList.add('pindrag');
+  const up = () => { document.body.classList.remove('pindrag'); removeEventListener('pointermove', go); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
   addEventListener('pointermove', go); addEventListener('pointerup', up); addEventListener('pointercancel', up);
 });
 $('trayedge').addEventListener('pointerdown', e => {
