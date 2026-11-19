@@ -125,6 +125,17 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .meaning textarea{resize:none;overflow:hidden;font:inherit;line-height:1.35;field-sizing:content;flex:1;min-width:0;padding:8px 10px;border:0;outline:none;border-radius:9px;background:rgba(255,255,255,.08);color:var(--cream);user-select:text;-webkit-user-select:text}
 .meaning textarea::placeholder{color:var(--faint)}
 .meaning textarea:focus{background:rgba(255,255,255,.13)}
+.erules{margin:0 0 6px;transition:opacity .2s}
+.erules.off{opacity:.38;pointer-events:none}
+.erow{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+.erow>i{flex:none;width:14px;height:14px;border-radius:50%}
+.eseg{display:flex;flex:1;min-width:0;padding:3px;border-radius:10px;background:rgba(0,0,0,.28);box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
+.eseg button{flex:1;text-align:center;padding:6px 4px;border-radius:7px;font-size:11.5px;font-weight:600;color:var(--dim);white-space:nowrap;transition:background .18s,color .18s,scale .25s var(--spring)}
+.eseg button:active{scale:.92}
+.eseg button[aria-pressed="true"]{background:var(--cream);color:#2a241e}
+.ehint{font-size:11.5px;line-height:1.45;color:var(--faint);margin:0 0 12px}
+#ed .rflash{animation:rflash .7s ease-out}
+@keyframes rflash{0%{box-shadow:0 0 0 3px rgba(255,255,255,.55);border-radius:3px}100%{box-shadow:0 0 0 3px rgba(255,255,255,0);border-radius:3px}}
 .linkbtn{font-size:12px;color:var(--dim);padding:4px 8px;border-radius:8px}
 .linkbtn:hover{background:rgba(255,255,255,.08);color:var(--cream)}
 .doc span[class*=" k-"]{box-shadow:inset 0 -2px 0 rgba(124,92,214,.75)}
@@ -425,6 +436,14 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="meaning"><i style="background:var(--Y)"></i><textarea id="dY" rows="1" maxlength="80" placeholder="trying · no bashing"></textarea></div>
   <div class="meaning"><i style="background:var(--G)"></i><textarea id="dG" rows="1" maxlength="80" placeholder="trying · bashing"></textarea></div>
   <div class="row" style="justify-content:flex-end;margin-top:-2px"><button class="linkbtn" id="dReset">Reset to defaults</button></div>
+  <h4 style="margin-top:4px">Edit rules</h4>
+  <div class="row"><span>Use edit rules</span><button class="toggle" id="tRules" role="switch"></button></div>
+  <div class="erules" id="eRules">
+  <div class="erow"><i style="background:var(--R)"></i><div class="eseg" data-rc="r"><button data-v="free">Free</button><button data-v="rewrite">Rewrite only</button><button data-v="lock">Locked</button></div></div>
+  <div class="erow"><i style="background:var(--Y)"></i><div class="eseg" data-rc="y"><button data-v="free">Free</button><button data-v="rewrite">Rewrite only</button><button data-v="lock">Locked</button></div></div>
+  <div class="erow"><i style="background:var(--G)"></i><div class="eseg" data-rc="g"><button data-v="free">Free</button><button data-v="rewrite">Rewrite only</button><button data-v="lock">Locked</button></div></div>
+  </div>
+  <p class="ehint">Free: edit anything. Rewrite only: no tweaking. Try to change a finished sentence and the whole thing gets selected, so whatever you type next replaces it. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
 </div>
 
 <div class="veil" id="veilDocs" hidden></div>
@@ -829,9 +848,89 @@ function toggleFmt(k) {
   updateFmtUI(); blip('n', true);
 }
 
+/* ---------- edit rules ---------- */
+const RULE_DEF = { r: 'free', y: 'rewrite', g: 'free', n: 'free' };
+const ruleOf = c => settings.rulesOn === false ? 'free' : ((settings.rules && settings.rules[c]) || RULE_DEF[c] || 'free');
+const rulesActive = () => settings.rulesOn !== false && ['r', 'y', 'g'].some(c => ruleOf(c) !== 'free');
+function sentSpans(p) {
+  const runs = pToRuns(p), cols = []; let txt = '';
+  for (const r of runs) { txt += r.t; for (let k = 0; k < r.t.length; k++) cols.push(r.c); }
+  const out = [], re = /[^.!?…]*(?:[.!?…]+["'”’)\]*_]*|$)/g; let m;
+  while ((m = re.exec(txt)) && m[0].length) {
+    const lead = m[0].search(/\S/); if (lead < 0) continue;
+    const st = m.index + lead, en = m.index + m[0].length;
+    out.push({ s: st, e: en, c: cols[st], done: TERM_END.test(m[0]) });
+  }
+  return { txt, out };
+}
+// first finished sentence whose rule the edit [A,B) breaks (A === B means an insertion point)
+let rw = null; // a sentence being rewritten: [s, e] in paragraph p stays open
+function rwTrack() { if (!rw) return; const s = getSel(); if (!s || !collapsed(s) || s.f.p !== rw.p || s.f.o < rw.s) { rw = null; return; } rw.e = s.f.o; }
+function ruleBlock(A, B) {
+  ruleBlock.cover = null;
+  const ps = paras(), cur = getSel(), caret = cur && collapsed(cur) ? cur.f : null;
+  const ins = A.p === B.p && A.o === B.o;
+  for (let pi = A.p; pi <= B.p; pi++) {
+    const p = ps[pi]; if (!p) continue;
+    const { txt, out } = sentSpans(p);
+    const a = pi === A.p ? A.o : 0, b = pi === B.p ? B.o : txt.length;
+    if (!ins && a >= b) continue;
+    if (rw && rw.p === pi && a >= rw.s && b <= rw.e) continue;
+    for (const x of out) {
+      if (!x.done) continue;
+      const rule = ruleOf(x.c); if (rule === 'free') continue;
+      // the sentence you just finished stays open until you start the next one
+      if (caret && caret.p === pi && caret.o >= x.e && !txt.slice(x.e).trim()) continue;
+      const hit = ins ? (a > x.s && a < x.e) : (a < x.e && b > x.s);
+      if (!hit) continue;
+      if (rule === 'rewrite' && !ins && a <= x.s && b >= x.e) { if (!ruleBlock.cover) ruleBlock.cover = { p: A.p, s: A.o, e: A.o }; continue; }
+      return { ...x, rule, p: pi };
+    }
+  }
+  return null;
+}
+let ruleToastAt = 0, ruleMsg = '';
+function ruleToast(m) { if (m !== ruleMsg || Date.now() - ruleToastAt > 2500) toast(m); ruleMsg = m; ruleToastAt = Date.now(); }
+function refuseEdit(x) {
+  const nm = NAMES[x.c] || 'This';
+  if (x.rule === 'rewrite') {
+    setSel({ a: { p: x.p, o: x.s }, f: { p: x.p, o: x.e } });
+    if (mode !== x.c) setMode(x.c, { typingOnly: true });
+    const p = paras()[x.p]; if (p) { p.classList.remove('rflash'); void p.offsetWidth; p.classList.add('rflash'); setTimeout(() => p.classList.remove('rflash'), 800); }
+    ruleToast(nm + ' is rewrite only. Type to replace the whole sentence.');
+  } else ruleToast(nm + ' sentences are locked.');
+  blip('n', true);
+}
+function editRange(e) {
+  const s = getSel(); if (!s) return null;
+  const t = e.inputType;
+  if (!collapsed(s)) return ordered(s);
+  const rs = e.getTargetRanges ? e.getTargetRanges() : [];
+  if (rs.length && (t.startsWith('delete') || t === 'insertReplacementText' || t === 'insertFromDrop')) {
+    const A = posOf(rs[0].startContainer, rs[0].startOffset), B = posOf(rs[0].endContainer, rs[0].endOffset);
+    if (A && B && A.p >= 0 && B.p >= 0) return (A.p < B.p || (A.p === B.p && A.o <= B.o)) ? [A, B] : [B, A];
+  }
+  if (t === 'deleteContentBackward') return s.f.o > 0 ? [{ p: s.f.p, o: s.f.o - 1 }, s.f] : null;
+  if (t === 'deleteContentForward') { const L = textOf(paras()[s.f.p]).length; return s.f.o < L ? [s.f, { p: s.f.p, o: s.f.o + 1 }] : null; }
+  if (t.startsWith('delete')) return null;
+  return [s.f, s.f];
+}
+function ruleGate(e) {
+  if (!rulesActive()) return false;
+  const t = e.inputType || '';
+  if (!(t.startsWith('insert') || t.startsWith('delete'))) return false;
+  const r = editRange(e); if (!r) return false;
+  if (rw && !(r[0].p === rw.p && r[1].p === rw.p && r[0].o >= rw.s && r[1].o <= rw.e)) rw = null;
+  const x = ruleBlock(r[0], r[1]);
+  if (!x) { if (ruleBlock.cover) rw = ruleBlock.cover; return false; }
+  refuseEdit(x); return true;
+}
+document.addEventListener('selectionchange', () => { if (!rw) return; const s = getSel(); if (s && collapsed(s) && (s.f.p !== rw.p || s.f.o < rw.s || s.f.o > rw.e)) rw = null; });
+
 /* ---------- input handling ---------- */
 ed.addEventListener('beforeinput', e => {
   if (composing || e.isComposing) return;
+  if (ruleGate(e)) { e.preventDefault(); return; }
   const t = e.inputType;
   if (t === 'insertText' && e.data != null) {
     e.preventDefault();
@@ -868,6 +967,7 @@ ed.addEventListener('compositionstart', () => { composing = true; pushUndo('othe
 ed.addEventListener('compositionend', () => { composing = false; clean(); changed(); });
 ed.addEventListener('paste', e => {
   e.preventDefault();
+  if (rulesActive()) { const s = getSel(); if (s) { const [A, B] = ordered(s); if (rw && !(A.p === rw.p && B.p === rw.p && A.o >= rw.s && B.o <= rw.e)) rw = null; const x = ruleBlock(A, B); if (x) { refuseEdit(x); return; } if (ruleBlock.cover) rw = ruleBlock.cover; } }
   const t = (e.clipboardData.getData('text/plain') || '').replace(/\r\n?/g, '\n');
   if (!t) return;
   pushUndo('paste', true);
@@ -895,6 +995,7 @@ $('page').addEventListener('mousedown', e => {
 /* ---------- state, autosave, tally ---------- */
 let draftT = 0, tallyT = 0;
 function changed() {
+  rwTrack();
   setDirty(true);
   clearTimeout(draftT); draftT = setTimeout(pushDraft, 1200);
   clearTimeout(tallyT); tallyT = setTimeout(tally, 250);
@@ -943,6 +1044,9 @@ function applySettings() {
   $('tFx').setAttribute('aria-checked', settings.fx !== false);
   $('tRun').setAttribute('aria-checked', settings.runCards !== false);
   for (const b of $('seg').children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
+  $('tRules').setAttribute('aria-checked', settings.rulesOn !== false);
+  $('eRules').classList.toggle('off', settings.rulesOn === false);
+  for (const g of document.querySelectorAll('.eseg')) { const v = (settings.rules && settings.rules[g.dataset.rc]) || RULE_DEF[g.dataset.rc]; for (const b of g.children) b.setAttribute('aria-pressed', b.dataset.v === v); }
   if (typeof pagesOn !== 'undefined') { applyZoom(); schedulePages(); }
 }
 
@@ -2165,6 +2269,8 @@ for (const [id, c] of [['dR', 'r'], ['dY', 'y'], ['dG', 'g']]) {
   $(id).addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
   $(id).addEventListener('input', e => { grow(e.target); settings.desc = Object.assign({}, settings.desc, { [c]: e.target.value }); saveSettings(); updateModeUI(false); });
 }
+$('tRules').onclick = () => { settings.rulesOn = settings.rulesOn === false; saveSettings(); applySettings(); blip('g', true); };
+for (const g of document.querySelectorAll('.eseg')) for (const b of g.children) { b.addEventListener('mousedown', e => e.preventDefault()); b.onclick = () => { settings.rules = Object.assign({}, RULE_DEF, settings.rules, { [g.dataset.rc]: b.dataset.v }); saveSettings(); applySettings(); blip(g.dataset.rc, true); }; }
 $('dReset').onclick = () => { settings.desc = {}; saveSettings(); for (const id of ['dR', 'dY', 'dG']) { $(id).value = ''; grow($(id)); } updateModeUI(false); };
 function grow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
 function fillDesc() { const d = settings.desc || {}; $('dR').value = d.r || ''; $('dY').value = d.y || ''; $('dG').value = d.g || ''; for (const id of ['dR', 'dY', 'dG']) requestAnimationFrame(() => grow($(id))); }
