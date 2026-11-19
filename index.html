@@ -388,6 +388,14 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
 .logbtn:active{scale:.92}
 .logbtn[aria-pressed="true"]{background:#c95e10;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
 .logbtn.goal{box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),0 0 12px 2px rgba(242,122,29,.55)}
+.logbtn{position:relative;overflow:visible}
+.logbtn.pop{animation:logpop .5s var(--spring)}
+.logbtn.nope{animation:lognope .35s ease}
+@keyframes logpop{0%{scale:1}30%{scale:1.22;filter:brightness(1.25)}100%{scale:1}}
+@keyframes lognope{0%,100%{translate:0}25%{translate:-3px}75%{translate:3px}}
+.logfly{position:fixed;z-index:60;pointer-events:none;font:800 13px system-ui,"Segoe UI",sans-serif;color:var(--lo2);text-shadow:0 1px 6px rgba(0,0,0,.6);animation:logfly 1.1s ease-out forwards}
+@keyframes logfly{0%{translate:-50% 0;opacity:0}15%{opacity:1}100%{translate:-50% -42px;opacity:0}}
+#bLogT[aria-pressed="true"]{color:var(--lo2)}
 .logbtn.due::after{content:"";display:inline-block;width:5px;height:5px;margin:0 0 1px 5px;border-radius:50%;background:#fff6ea;vertical-align:middle;text-indent:0}
 .logpanel{display:flex;flex-direction:column;background:#2a2520;color:var(--cream);font-size:12.5px}
 .logpanel[hidden]{display:none}
@@ -576,7 +584,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
 </main>
 <svg class="leaders" id="leaders"></svg>
 </div>
-<footer class="foot"><button class="fb" id="bDare" title="Roll a dare"><svg viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="3"/><circle cx="7" cy="7" r=".9" fill="currentColor"/><circle cx="13" cy="13" r=".9" fill="currentColor"/><circle cx="10" cy="10" r=".9" fill="currentColor"/></svg></button><button class="fb" id="bBeats" title="Story curve" aria-pressed="false"><svg viewBox="0 0 20 20"><path d="M2 12c2.5 0 3-6 5.5-6S10 14 12.5 14 15 8 18 8"/></svg></button><span class="pg" id="pageinfo"></span><span id="counts"></span><button class="logbtn" id="bLog" aria-pressed="false" title="Words log and story records">LOG</button></footer>
+<footer class="foot"><button class="fb" id="bDare" title="Roll a dare"><svg viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="3"/><circle cx="7" cy="7" r=".9" fill="currentColor"/><circle cx="13" cy="13" r=".9" fill="currentColor"/><circle cx="10" cy="10" r=".9" fill="currentColor"/></svg></button><button class="fb" id="bLogT" title="Words log and records" aria-pressed="false"><svg viewBox="0 0 20 20"><path d="M4 16.5V9.5M8.5 16.5V5.5M13 16.5v-4.5M17 16.5H3"/><path d="M15.5 4.5l1.6 1.6M17.1 4.5l-1.6 1.6" opacity=".0"/></svg></button><button class="fb" id="bBeats" title="Story curve" aria-pressed="false"><svg viewBox="0 0 20 20"><path d="M2 12c2.5 0 3-6 5.5-6S10 14 12.5 14 15 8 18 8"/></svg></button><span class="pg" id="pageinfo"></span><span id="counts"></span><button class="logbtn" id="bLog" aria-pressed="false" title="Log your new words">LOG</button></footer>
 <div class="veil" id="veilLog" hidden></div>
 <aside class="logpanel" id="logPanel" hidden>
   <div class="loghead"><div class="logtabs" id="logTabs"><button data-lt="words">Words</button><button data-lt="records">Records</button></div><span class="sp"></span><span class="stamp">LOG</span><button class="logx" id="logClose" title="Close">✕</button></div>
@@ -1332,10 +1340,11 @@ function lgStreak() {
 }
 function paintLogBtn() {
   const b = $('bLog'); if (!b) return;
-  b.setAttribute('aria-pressed', logOn);
+  const bt = $('bLogT'); if (bt) bt.setAttribute('aria-pressed', logOn);
   b.classList.toggle('goal', lg.goal > 0 && lgToday() >= lg.goal);
-  let due = false; try { due = lgDelta().d.w >= 25; } catch (e) {}
-  b.classList.toggle('due', due && !logOn);
+  let n = 0; try { n = lgDelta().d.w; } catch (e) {}
+  b.classList.toggle('due', n >= 25);
+  b.title = n ? `Log ${fmtN(n)} word${n === 1 ? '' : 's'} as ${(KINDS[lg.kind] || KINDS.draft)[0].toLowerCase()}` : 'Nothing new to log yet';
 }
 function logSoon() { if (lgQ) return; lgQ = setTimeout(() => { lgQ = 0; if (logOn && lg.tab === 'words') renderSess(); paintLogBtn(); }, 350); }
 function toggleLog(on) {
@@ -1601,7 +1610,18 @@ function wireRecords() {
 }
 for (const b of $('logTabs').children) { b.addEventListener('mousedown', e => e.preventDefault()); b.onclick = () => { lg.tab = b.dataset.lt; saveLg(); lgOpenEnt = lgOpenStory = null; renderLog(); $('logBody').scrollTop = 0; }; }
 $('bLog').addEventListener('mousedown', e => e.preventDefault());
-$('bLog').onclick = () => toggleLog();
+function lgQuick() {
+  const b = $('bLog'); let n = 0; try { lgEnsure(); n = lgDelta().d.w; } catch (e) {}
+  b.classList.remove('pop', 'nope'); void b.offsetWidth;
+  if (!n) { b.classList.add('nope'); toast('Nothing new to log yet.'); return; }
+  lgLogNow(); b.classList.add('pop');
+  const r = b.getBoundingClientRect(), f = document.createElement('div'); f.className = 'logfly'; f.textContent = '+' + fmtN(n);
+  f.style.left = (r.left + r.width / 2) + 'px'; f.style.top = (r.top - 18) + 'px'; document.body.appendChild(f); setTimeout(() => f.remove(), 1200);
+}
+$('bLog').onclick = lgQuick;
+$('bLog').addEventListener('contextmenu', e => { e.preventDefault(); toggleLog(); });
+$('bLogT').addEventListener('mousedown', e => e.preventDefault());
+$('bLogT').onclick = () => toggleLog();
 $('logClose').onclick = () => toggleLog(false);
 $('veilLog').onclick = () => toggleLog(false);
 
