@@ -85,11 +85,17 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .ph{position:absolute;left:24px;top:30px;right:24px;font-family:var(--font);font-size:var(--size);line-height:var(--line);color:#b8ad9c;pointer-events:none;font-style:italic}
 @media (min-width:700px){.ph{left:76px;top:68px;right:76px}}
 .indent .ph{text-indent:2.2em}
-#pages{padding:20px 0 60px}
-.sheet{position:relative;width:816px;height:1056px;margin:0 auto;padding:96px;background:var(--paper);border-radius:2px;box-shadow:0 1px 2px rgba(0,0,0,.3),0 14px 40px -12px rgba(0,0,0,.55);cursor:text}
-.sheet .body{width:624px;height:864px;overflow:hidden}
-.pnum{width:816px;margin:10px auto 26px;text-align:center;color:var(--faint);font-size:12px;font-variant-numeric:tabular-nums}
-.pageinfo{position:fixed;z-index:6;left:50%;bottom:calc(var(--sb) + 16px);translate:-50% 0;padding:7px 14px;border-radius:99px;background:rgba(20,17,14,.85);color:var(--cream);font-size:12.5px;font-weight:600;pointer-events:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.paged .page{width:816px;max-width:none;padding:96px;margin:16px auto 50vh;border-radius:0;box-shadow:none;min-height:1056px;
+  background:repeating-linear-gradient(to bottom,var(--paper) 0,var(--paper) 1056px,transparent 1056px,transparent 1084px)}
+.paged #ed{width:624px;min-height:864px}
+.paged .ph{left:96px;top:96px;right:96px}
+.paged .page::after{content:attr(data-last);position:absolute;left:0;right:0;bottom:46px;text-align:center;font:11px system-ui,sans-serif;color:#b8ad9c}
+.pgbrk{display:block;position:relative;user-select:none;-webkit-user-select:none;pointer-events:none;text-indent:0}
+.pgbrk::after{content:attr(data-n);position:absolute;left:0;right:0;top:calc(var(--fill) + 46px);text-align:center;font:11px system-ui,sans-serif;color:#b8ad9c;font-style:normal;font-weight:400}
+.foot{flex:none;display:flex;align-items:center;justify-content:center;gap:10px;height:26px;padding:0 12px;background:var(--bar);color:var(--dim);font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}
+.foot .pg{color:var(--cream);font-weight:600}
+.foot .pg:empty{display:none}
+.pageinfo-old{position:fixed;z-index:6;left:50%;bottom:calc(var(--sb) + 16px);translate:-50% 0;padding:7px 14px;border-radius:99px;background:rgba(20,17,14,.85);color:var(--cream);font-size:12.5px;font-weight:600;pointer-events:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .pageinfo:empty{display:none}
 
 /* sheets (Aa + docs) */
@@ -180,10 +186,9 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
     <div class="ph" id="ph">Start anywhere. Red means you don't have to try.</div>
     <div id="ed" class="doc" contenteditable="true" spellcheck="true" autocapitalize="sentences"><p><br></p></div>
   </div>
-  <div id="pages" hidden></div>
 </main>
+<footer class="foot"><span class="pg" id="pageinfo"></span><span id="counts"></span></footer>
 </div>
-<div class="pageinfo" id="pageinfo"></div>
 
 <div class="veil" id="veilPop" hidden></div>
 <div class="sheetpanel" id="pop" hidden>
@@ -262,7 +267,7 @@ function pToRuns(p) {
     for (const ch of n.childNodes) {
       if (ch.nodeType === 3) { const t = ch.data.replace(/[​\r\n]/g, ''); if (t) pushRun(runs, { ...st, t }); }
       else if (ch.nodeType === 1) {
-        if (ch.tagName === 'BR') continue;
+        if (ch.tagName === 'BR' || isBrk(ch)) continue;
         const s = { ...st }, cl = ch.classList, tg = ch.tagName;
         for (const c of ['r', 'y', 'g', 'n']) if (cl.contains('c-' + c)) s.c = c;
         if (tg === 'B' || tg === 'STRONG' || cl.contains('b') || /^(bold|[6-9]00)$/.test(ch.style.fontWeight)) s.b = true;
@@ -286,6 +291,7 @@ function canonical(p) {
   if (!ch.length) return false;
   let prev = null;
   for (const n of ch) {
+    if (isBrk(n)) { prev = null; continue; }
     if (n.nodeName !== 'SPAN' || n.childNodes.length !== 1 || n.firstChild.nodeType !== 3 || !n.firstChild.data ||
         /[​\r\n]/.test(n.firstChild.data) || !/^c-[rygn]( b)?( i)?( u)?$/.test(n.className) || n.getAttribute('style')) return false;
     if (prev && prev.className === n.className) return false;
@@ -293,7 +299,8 @@ function canonical(p) {
   }
   return true;
 }
-const paras = () => [...ed.children];
+const isBrk = n => !!n && n.nodeType === 1 && n.classList.contains('pgbrk');
+const paras = () => [...ed.children].filter(n => !isBrk(n));
 const textOf = p => p.textContent;
 
 /* ---------- selection ---------- */
@@ -301,8 +308,9 @@ function posOf(node, offset) {
   if (node === ed) {
     const ps = paras();
     if (!ps.length) return { p: 0, o: 0 };
-    if (offset >= ps.length) return { p: ps.length - 1, o: textOf(ps[ps.length - 1]).length };
-    return { p: offset, o: 0 };
+    const kids = [...ed.childNodes].slice(0, offset).filter(n => n.nodeType === 1 && !isBrk(n)).length;
+    if (kids >= ps.length) return { p: ps.length - 1, o: textOf(ps[ps.length - 1]).length };
+    return { p: kids, o: 0 };
   }
   let p = node; while (p && p.parentNode !== ed) p = p.parentNode;
   if (!p) return null;
@@ -351,6 +359,7 @@ function clean() {
   let changed = false, cur = null;
   if (!ed.firstChild) { ed.appendChild(document.createElement('p')); changed = true; }
   for (const n of [...ed.childNodes]) {
+    if (isBrk(n)) { cur = null; continue; }
     if (n.nodeType === 1 && (n.tagName === 'P' || n.tagName === 'DIV')) {
       cur = null;
       if (n.tagName === 'DIV') { const p = document.createElement('p'); while (n.firstChild) p.appendChild(n.firstChild); ed.replaceChild(p, n); changed = true; }
@@ -396,6 +405,29 @@ function insertMulti(text, st) {
   }
   setSel(at(pos.p + lines.length - 1, lines[lines.length - 1].length));
 }
+function deleteChar(back) {
+  const s = getSel(); if (!s) return;
+  const ps = paras(), pi = s.f.p, p = ps[pi], o = s.f.o, txt = textOf(p), runs = pToRuns(p);
+  if (back) {
+    if (o > 0) {
+      const n = (o >= 2 && /[\uDC00-\uDFFF]/.test(txt[o - 1]) && /[\uD800-\uDBFF]/.test(txt[o - 2])) ? 2 : 1;
+      const [L, R] = splitRuns(runs, o - n), [, R2] = splitRuns(R, n);
+      render(p, concatRuns(L, R2)); setSel(at(pi, o - n));
+    } else if (pi > 0) {
+      const prev = ps[pi - 1], pl = textOf(prev).length;
+      render(prev, concatRuns(pToRuns(prev), runs)); p.remove(); setSel(at(pi - 1, pl));
+    }
+  } else {
+    if (o < txt.length) {
+      const n = (/[\uD800-\uDBFF]/.test(txt[o]) && /[\uDC00-\uDFFF]/.test(txt[o + 1] || '')) ? 2 : 1;
+      const [L, R] = splitRuns(runs, o), [, R2] = splitRuns(R, n);
+      render(p, concatRuns(L, R2)); setSel(at(pi, o));
+    } else if (pi < ps.length - 1) {
+      const next = ps[pi + 1];
+      render(p, concatRuns(runs, pToRuns(next))); next.remove(); setSel(at(pi, o));
+    }
+  }
+}
 function splitPara() {
   let s = getSel(); if (!s) return;
   if (!collapsed(s)) { deleteSelection(); s = getSel(); if (!s) return; }
@@ -431,14 +463,14 @@ function selRuns() {
 
 /* ---------- undo ---------- */
 let undoStack = [], redoStack = [], lastKind = null, lastAt = 0;
-const snap = () => ({ h: ed.innerHTML, s: getSel() });
+const snap = () => ({ h: cleanHTML(), s: getSel() });
 function pushUndo(kind, brk) {
   const now = Date.now();
   if (!brk && kind === lastKind && (kind === 'type' || kind === 'del') && now - lastAt < 1500) { lastAt = now; return; }
   undoStack.push(snap()); if (undoStack.length > 400) undoStack.shift();
   redoStack = []; lastKind = kind; lastAt = now;
 }
-function restore(x) { ed.innerHTML = x.h; clean(); if (x.s) setSel(clampSel(x.s)); deriveFromCaret(true); }
+function restore(x) { ed.innerHTML = x.h; removeBreaks(); clean(); if (x.s) setSel(clampSel(x.s)); deriveFromCaret(true); }
 function undo() { if (!undoStack.length) return; redoStack.push(snap()); restore(undoStack.pop()); lastKind = null; changed(); }
 function redo() { if (!redoStack.length) return; undoStack.push(snap()); restore(redoStack.pop()); lastKind = null; changed(); }
 
@@ -519,6 +551,9 @@ ed.addEventListener('beforeinput', e => {
   else if (t === 'formatItalic') { e.preventDefault(); toggleFmt('i'); }
   else if (t === 'formatUnderline') { e.preventDefault(); toggleFmt('u'); }
   else if (t.startsWith('format')) e.preventDefault();
+  else if ((t === 'deleteContentBackward' || t === 'deleteContentForward') && getSel() && collapsed(getSel())) {
+    e.preventDefault(); pushUndo('del'); deleteChar(t === 'deleteContentBackward'); changed();
+  }
   else if (t.startsWith('delete')) pushUndo('del', t === 'deleteByCut' || t === 'deleteByDrag');
   else pushUndo('other', true);
 });
@@ -554,7 +589,7 @@ function changed() {
   setDirty(true);
   clearTimeout(draftT); draftT = setTimeout(pushDraft, 1200);
   clearTimeout(tallyT); tallyT = setTimeout(tally, 250);
-  placeholder();
+  placeholder(); schedulePages();
 }
 function placeholder() { const ps = paras(); $('ph').hidden = !(ps.length === 1 && !textOf(ps[0]).length); }
 function pushDraft() { saveCurrent(); }
@@ -569,6 +604,15 @@ function tally() {
   el.children[1].style.width = (tot ? c.y / tot * 100 : 0) + '%';
   el.children[2].style.width = (tot ? c.g / tot * 100 : 0) + '%';
   el.title = tot ? `Red ${pct('r')}% · Yellow ${pct('y')}% · Green ${pct('g')}%` : 'Your color mix shows up here';
+  showCounts(); schedulePages();
+}
+function showCounts() {
+  const t = paras().map(textOf).join('\n');
+  const words = (t.match(/[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu) || []).length;
+  const chars = t.replace(/\n/g, '').length;
+  const sents = t.split(/[.!?…]+["'”’)\]]*(?=\s|$)|\n/).filter(x => /[\p{L}\p{N}]/u.test(x)).length;
+  const f = (n, w) => n.toLocaleString() + ' ' + w + (n === 1 ? '' : 's');
+  $('counts').textContent = `${f(words, 'word')} · ${f(chars, 'character')} · ${f(sents, 'sentence')}`;
 }
 function saveSettings() { LS.set('sl.settings', settings); }
 function applySettings() {
@@ -586,7 +630,7 @@ function applySettings() {
   $('tDrop').setAttribute('aria-checked', !!settings.dropcap);
   $('tSound').setAttribute('aria-checked', !!settings.sound);
   for (const b of $('seg').children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
-  if (typeof pagesOn !== 'undefined' && pagesOn) { const top = $('desk').scrollTop; paginate(); $('desk').scrollTop = top; pageInfo(); }
+  if (typeof pagesOn !== 'undefined') { applyZoom(); schedulePages(); }
 }
 
 /* ---------- sound ---------- */
@@ -709,111 +753,106 @@ function ask(msg, btns) {
 function closePop() { $('pop').hidden = true; $('veilPop').hidden = true; $('bAa').setAttribute('aria-pressed', false); }
 
 
-/* ---------- pages view ---------- */
-let pagesOn = false;
-function frag(runs, pi, off) {
-  const p = document.createElement('p');
-  p.dataset.p = pi; p.dataset.o = off;
-  if (off > 0) p.classList.add('cont');
-  if (pi === 0 && off === 0) p.classList.add('first');
-  if (!runs.length) { p.appendChild(document.createElement('br')); return p; }
-  let o = off;
-  for (const r of runs) { const s = document.createElement('span'); s.className = keyOf(r); s.textContent = r.t; s.dataset.p = pi; s.dataset.o = o; o += r.t.length; p.appendChild(s); }
-  return p;
+/* ---------- paged editing ---------- */
+let pagesOn = false, pageQ = 0, pageCount = 1;
+const PAGE_H = 864, MARG = 96, GAP = 28, SHEET = 1056;
+function cleanHTML() { const c = ed.cloneNode(true); for (const b of c.querySelectorAll('.pgbrk')) b.remove(); return c.innerHTML; }
+function removeBreaks() {
+  const bs = ed.querySelectorAll('.pgbrk'); if (!bs.length) return;
+  const ps = new Set();
+  for (const b of bs) { if (b.parentNode !== ed) ps.add(b.parentNode); b.remove(); }
+  for (const p of ps) render(p, pToRuns(p));
 }
-function paginate() {
-  const box = $('pages'), H = 864;
-  box.textContent = '';
-  let n = 0, body = null;
-  const newPage = () => {
-    n++;
-    const sh = document.createElement('div'); sh.className = 'sheet'; sh.dataset.n = n;
-    body = document.createElement('div'); body.className = 'doc body';
-    sh.appendChild(body); box.appendChild(sh);
-    const num = document.createElement('div'); num.className = 'pnum'; num.textContent = n; box.appendChild(num);
-  };
-  newPage();
-  paras().forEach((pel, pi) => {
-    const runs = pToRuns(pel), total = runs.reduce((x, r) => x + r.t.length, 0);
-    let off = 0, guard = 0;
-    while (guard++ < 2000) {
-      const rest = splitRuns(runs, off)[1], restLen = total - off;
-      const el = frag(rest, pi, off);
-      body.appendChild(el);
-      if (body.scrollHeight <= H) break;
-      body.removeChild(el);
-      let lo = 0, hi = restLen;
-      while (lo < hi) {
-        const mid = Math.ceil((lo + hi) / 2), t = frag(splitRuns(rest, mid)[0], pi, off);
-        body.appendChild(t); const fits = body.scrollHeight <= H; body.removeChild(t);
-        if (fits) lo = mid; else hi = mid - 1;
-      }
-      let k = lo;
-      if (k > 0 && k < restLen) {
-        const txt = rest.map(r => r.t).join(''), sp = Math.max(txt.lastIndexOf(' ', k - 1), txt.lastIndexOf('\t', k - 1));
-        if (sp > 0) k = sp + 1;
-      }
-      if (k > 0) { body.appendChild(frag(splitRuns(rest, k)[0], pi, off)); off += k; }
-      else if (!body.children.length) { body.appendChild(el); break; }
-      if (off >= total && k > 0) break;
-      newPage();
+function charRect(p, k) {
+  const w = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); let acc = 0, t;
+  while ((t = w.nextNode())) {
+    if (k < acc + t.data.length) { const r = document.createRange(); r.setStart(t, k - acc); r.setEnd(t, k - acc + 1); return r.getBoundingClientRect(); }
+    acc += t.data.length;
+  }
+  return null;
+}
+function insertBreakAt(p, k, sp) {
+  let acc = 0;
+  for (const span of [...p.children]) {
+    if (isBrk(span)) continue;
+    const len = span.textContent.length;
+    if (k === acc) { p.insertBefore(sp, span); return; }
+    if (k < acc + len) {
+      const t = span.textContent, b = span.cloneNode(false);
+      span.textContent = t.slice(0, k - acc); b.textContent = t.slice(k - acc);
+      span.after(sp); sp.after(b); return;
     }
-  });
-  fitPages();
-  return n;
+    acc += len;
+  }
+  p.appendChild(sp);
 }
-function fitPages() {
-  const w = $('desk').clientWidth - 40;
-  $('pages').style.zoom = Math.min(1, Math.max(0.35, w / 816)) * (settings.zoom || 1);
+function zoomEff() { const pg = $('page'); return (pg.getBoundingClientRect().height / (pg.offsetHeight || 1)) || 1; }
+function layoutPages() {
+  pageQ = 0;
+  if (!pagesOn || composing) return;
+  const focused = document.activeElement === ed, s = focused ? getSel() : null, keep = $('desk').scrollTop;
+  removeBreaks();
+  const z = zoomEff(), top0 = ed.getBoundingClientRect().top, Y = v => (v - top0) / z;
+  let pageBottom = PAGE_H, n = 1;
+  for (const p of paras()) {
+    let guard = 0;
+    while (guard++ < 400) {
+      const pr = p.getBoundingClientRect();
+      if (Y(pr.bottom) <= pageBottom + 0.5) break;
+      const len = textOf(p).length;
+      let k = 0;
+      if (len) {
+        let lo = 0, hi = len - 1, ans = len;
+        while (lo <= hi) { const mid = (lo + hi) >> 1, r = charRect(p, mid); if (r && Y(r.bottom) > pageBottom + 0.5) { ans = mid; hi = mid - 1; } else lo = mid + 1; }
+        k = ans >= len ? 0 : ans;
+      }
+      const T = k === 0 ? Y(pr.top) : Y(charRect(p, k).top);
+      if (k === 0 && T >= pageBottom - PAGE_H - 0.5) break; // already at the top of a page and still too tall: let it run over
+      const fill = Math.max(0, pageBottom - T);
+      const sp = document.createElement('span');
+      sp.className = 'pgbrk'; sp.contentEditable = 'false'; sp.dataset.n = n;
+      sp.style.height = (fill + MARG * 2 + GAP) + 'px'; sp.style.setProperty('--fill', fill + 'px');
+      if (k === 0) ed.insertBefore(sp, p); else insertBreakAt(p, k, sp);
+      n++; pageBottom += SHEET + GAP;
+    }
+  }
+  pageCount = n;
+  $('page').style.height = (n * SHEET + (n - 1) * GAP) + 'px';
+  $('page').dataset.last = n;
+  if (s) { ownSelAt = performance.now(); const a = locate(clampSel(s).a), f = locate(clampSel(s).f); try { getSelection().setBaseAndExtent(a.n, a.o, f.n, f.o); } catch (e) {} }
+  $('desk').scrollTop = keep;
+  if (focused) keepCaretVisible();
+  pageInfo();
 }
+function schedulePages() { if (pagesOn && !pageQ) pageQ = requestAnimationFrame(layoutPages); }
 function pageInfo() {
   if (!pagesOn) { $('pageinfo').textContent = ''; return; }
-  const sheets = [...$('pages').querySelectorAll('.sheet')], d = $('desk').getBoundingClientRect(), mid = d.top + d.height / 2;
-  let cur = 1;
-  for (const s of sheets) { const r = s.getBoundingClientRect(); if (r.top <= mid) cur = +s.dataset.n; }
-  $('pageinfo').textContent = `Page ${cur} of ${sheets.length}`;
+  const d = $('desk').getBoundingClientRect(), pr = $('page').getBoundingClientRect(), z = zoomEff();
+  const y = (d.top + d.height / 2) - pr.top;
+  const cur = Math.min(pageCount, Math.max(1, Math.floor(y / ((SHEET + GAP) * z)) + 1));
+  $('pageinfo').textContent = `Page ${cur} of ${pageCount}`;
 }
 function togglePages(on) {
   on = on === undefined ? !pagesOn : !!on;
   if (on === pagesOn) return;
+  const s = getSel();
   pagesOn = on;
+  document.body.classList.toggle('paged', on);
   $('bPages').setAttribute('aria-pressed', on);
-  if (on) {
-    const s = getSel();
-    $('page').hidden = true; $('pages').hidden = false;
-    paginate();
-    let target = null;
-    if (s) for (const sp of $('pages').querySelectorAll('[data-p="' + s.f.p + '"]')) if (+sp.dataset.o <= s.f.o) target = sp;
-    if (target) target.scrollIntoView({ block: 'center' }); else $('desk').scrollTop = 0;
-    pageInfo();
-  } else {
-    $('pages').hidden = true; $('pages').textContent = ''; $('page').hidden = false;
-    pageInfo(); ed.focus();
-  }
+  if (on) { applyZoom(); layoutPages(); }
+  else { removeBreaks(); $('page').style.height = ''; applyZoom(); pageInfo(); }
+  if (s) { ed.focus(); setSel(clampSel(s)); }
   blip('n', true);
 }
-$('pages').addEventListener('click', e => {
-  let p = null, o = 0;
-  const r = document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : null;
-  if (r && r.startContainer.nodeType === 3 && r.startContainer.parentElement.dataset.p != null) {
-    const sp = r.startContainer.parentElement; p = +sp.dataset.p; o = +sp.dataset.o + r.startOffset;
-  } else {
-    const pe = e.target.closest && e.target.closest('p[data-p]');
-    if (pe) { p = +pe.dataset.p; o = +pe.dataset.o; }
-    else { const sh = e.target.closest && e.target.closest('.sheet'); const last = sh && [...sh.querySelectorAll('p[data-p]')].pop(); if (last) { p = +last.dataset.p; o = +last.dataset.o + last.textContent.length; } }
-  }
-  togglePages(false);
-  if (p != null) { setSel(clampSel(at(p, o))); deriveFromCaret(true); }
-});
 $('desk').addEventListener('scroll', () => { if (pagesOn) pageInfo(); });
-addEventListener('resize', () => { if (pagesOn) { fitPages(); pageInfo(); } });
+addEventListener('resize', () => { if (pagesOn) { applyZoom(); schedulePages(); } });
 
 /* ---------- zoom ---------- */
 let zoomSaveT = 0;
 function applyZoom() {
   const z = settings.zoom || 1;
-  $('page').style.zoom = z;
-  if (pagesOn) fitPages();
+  const fit = pagesOn ? Math.min(1, Math.max(0.3, ($('desk').clientWidth - 24) / 816)) : 1;
+  $('page').style.zoom = z * fit;
   $('zoomv').textContent = Math.round(z * 100) + '%';
 }
 function setZoom(z, anchorY) {
@@ -824,7 +863,7 @@ function setZoom(z, anchorY) {
   const top = d.scrollTop;
   settings.zoom = z; applyZoom();
   d.scrollTop = (top + y) * (z / old) - y;
-  if (pagesOn) pageInfo();
+  if (pagesOn) { schedulePages(); pageInfo(); }
   clearTimeout(zoomSaveT); zoomSaveT = setTimeout(saveSettings, 400);
 }
 $('desk').addEventListener('wheel', e => {
@@ -901,7 +940,7 @@ function saveCurrent(quiet) {
   if (!currentId) return;
   const list = idx(), d = list.find(x => x.id === currentId);
   if (!d) return;
-  if (!LS.set('sl.doc.' + currentId, ed.innerHTML)) return;
+  if (!LS.set('sl.doc.' + currentId, cleanHTML())) return;
   d.updated = Date.now();
   if (!d.named) d.title = firstWords();
   list.sort((a, b) => b.updated - a.updated);
@@ -918,10 +957,9 @@ function createDoc(html, title) {
 }
 function openDoc(id, focus) {
   if (currentId && dirty) saveCurrent(true);
-  if (pagesOn) togglePages(false);
   currentId = id; LS.set('sl.current', id);
   ed.innerHTML = LS.get('sl.doc.' + id, '<p><br></p>') || '<p><br></p>';
-  clean();
+  removeBreaks(); clean();
   undoStack = []; redoStack = []; lastKind = null; dirty = false;
   titleUI(); tally(); placeholder();
   $('desk').scrollTop = 0;
@@ -1016,7 +1054,7 @@ function tap(el, fn) {
 for (const b of document.querySelectorAll('[data-c]')) tap(b, () => { if (document.activeElement !== ed && !pagesOn) ed.focus(); setMode(b.dataset.c, { click: true }); });
 for (const [id, k] of [['bB', 'b'], ['bI', 'i'], ['bU', 'u']]) tap($(id), () => toggleFmt(k));
 tap($('bEye'), () => { settings.colors = !settings.colors; saveSettings(); applySettings(); blip('n', true); });
-tap($('bPages'), () => { ed.blur(); togglePages(); });
+tap($('bPages'), () => togglePages());
 for (const b of $('seg').children) b.onclick = () => { settings.pattern = b.dataset.p; saveSettings(); applySettings(); updateModeUI(false); blip('n', true); };
 $('bAa').onclick = () => { const open = $('pop').hidden; closeDocs(); $('pop').hidden = !open; $('veilPop').hidden = !open; $('bAa').setAttribute('aria-pressed', open); };
 $('veilPop').onclick = () => closePop();
@@ -1069,7 +1107,6 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('keydown', e => {
   const mod = e.ctrlKey || e.metaKey, inEd = document.activeElement === ed || document.activeElement === document.body;
   if (document.querySelector('.mveil')) return;
-  if (pagesOn && !mod && !e.altKey && (e.key.length === 1 || e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Escape')) { e.preventDefault(); togglePages(false); return; }
   if (!mod) {
     if (e.key === 'Tab' && document.activeElement === ed) { e.preventDefault(); pushUndo('type', true); insertText('\t'); changed(); }
     else if (e.key === 'Escape') { closePop(); closeDocs(); }
