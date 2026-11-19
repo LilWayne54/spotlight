@@ -460,7 +460,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="erow"><i style="background:var(--Y)"></i><div class="eseg" data-rc="y"><button data-v="free">Free</button><button data-v="strike">Strike</button><button data-v="alternate">Alternate</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
   <div class="erow"><i style="background:var(--G)"></i><div class="eseg" data-rc="g"><button data-v="free">Free</button><button data-v="strike">Strike</button><button data-v="alternate">Alternate</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
   </div>
-  <p class="ehint" id="ehintRules">Free: edit anything. Strike: finished sentences can't be edited, but you can strike one out (the S button) and write a new version. Alternate: like Strike, but the old version stays as a dotted alternate and your new one goes right after it. Use the S button on either one later to keep it and drop the other. Forward: no backspacing or going back in, even on the sentence you're writing. Just keep typing. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
+  <p class="ehint" id="ehintRules">Free: edit anything. Strike: finished sentences can't be edited, but you can strike one out (the S button) and write a new version. Alternate: like Strike, but the old version stays as a dotted alternate and your new one goes right after it. Use the S button on either one later to keep it and drop the other. Both treat any stretch of text as a sentence, period or not. Forward: no backspacing or going back in, even on the sentence you're writing. Just keep typing. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
   <h4 style="margin-top:4px">Edit points</h4>
   <div class="prow" data-pc="r"><i style="background:var(--R)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
   <div class="prow" data-pc="y"><i style="background:var(--Y)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
@@ -906,7 +906,7 @@ function ruleBlock(A, B) {
         if (ins ? (a > x.s && a < x.e) : (a < x.e && b > x.s)) return { ...x, rule, p: pi };
         continue;
       }
-      if (!x.done || inRw) continue;
+      if ((!x.done && rule !== 'strike' && rule !== 'alternate') || inRw) continue;
       // the sentence you just finished stays open until you start the next one
       if (caret && caret.p === pi && caret.o >= x.e && !txt.slice(x.e).trim()) continue;
       const hit = ins ? (a > x.s && a < x.e) : (a < x.e && b > x.s);
