@@ -838,8 +838,8 @@ ed.addEventListener('beforeinput', e => {
     const s = getSel(); if (!s) return;
     const x = collapsed(s) ? textOf(paras()[s.f.p]).slice(0, s.f.o) : '';
     pushUndo('type', e.data === ' ' || !collapsed(s));
-    insertText(e.data);
-    if (e.data === ' ' && TERM_END.test(x)) { sentenceDone(mode); advance(true); }
+    insertText(e.data); typedSince += e.data.replace(/\s/g, '').length;
+    if (e.data === ' ' && TERM_END.test(x)) { sentenceDone(mode, x); advance(true); }
     changed();
   } else if (t === 'insertParagraph' || t === 'insertLineBreak') {
     e.preventDefault();
@@ -847,7 +847,7 @@ ed.addEventListener('beforeinput', e => {
     const x = collapsed(s) ? textOf(paras()[s.f.p]).slice(0, s.f.o) : '';
     pushUndo('para', true);
     splitPara();
-    if (TERM_END.test(x.trimEnd())) { sentenceDone(mode); advance(true); }
+    if (TERM_END.test(x.trimEnd())) { sentenceDone(mode, x); advance(true); }
     changed();
   } else if (t === 'historyUndo') { e.preventDefault(); undo(); }
   else if (t === 'historyRedo') { e.preventDefault(); redo(); }
@@ -1626,7 +1626,17 @@ const COLHEX = { r: '#e5534b', y: '#f2c230', g: '#4cbb5e', n: '#d8cfc0' };
 function wordCount() { const t = paras().map(textOf).join('\n'); return (t.match(/[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu) || []).length; }
 function startRun() { run = { start: Date.now(), cols: [], words0: wordCount(), best: 0 }; runShown = false; $('runcard').hidden = true; }
 function activity() { const now = Date.now(); if (!run || (runShown && now - lastAct > 90000)) startRun(); lastAct = now; }
-function sentenceDone(c) {
+// a sentence only scores once, and only if you actually wrote it
+const countedSent = new Set(); let typedSince = 0;
+function sentenceKey(x) {
+  const body = x.trimEnd().replace(/[.!?…"'”’)\]*_]+$/, '');
+  const seg = body.split(/[.!?…]+/).pop().trim();
+  return { seg, sig: seg.toLowerCase().replace(/\s+/g, ' ') };
+}
+function sentenceDone(c, x) {
+  const k = sentenceKey(x || ''), words = k.seg.split(/\s+/).filter(w => /\p{L}/u.test(w)).length;
+  if (words < 2 || k.seg.replace(/[^\p{L}\p{N}]/gu, '').length < 6 || typedSince < 6 || countedSent.has(k.sig)) return false;
+  countedSent.add(k.sig); typedSince = 0;
   const now = Date.now();
   activity();
   if (now - comboAt > 45000) combo = 0;
