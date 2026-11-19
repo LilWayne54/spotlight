@@ -130,7 +130,7 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .erow{display:flex;align-items:center;gap:10px;margin:0 0 8px}
 .erow>i{flex:none;width:14px;height:14px;border-radius:50%}
 .eseg{display:flex;flex:1;min-width:0;padding:3px;border-radius:10px;background:rgba(0,0,0,.28);box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
-.eseg button{flex:1;text-align:center;padding:6px 4px;border-radius:7px;font-size:11.5px;font-weight:600;color:var(--dim);white-space:nowrap;transition:background .18s,color .18s,scale .25s var(--spring)}
+.eseg button{flex:1;text-align:center;padding:6px 2px;border-radius:7px;font-size:11.5px;font-weight:600;color:var(--dim);white-space:nowrap;transition:background .18s,color .18s,scale .25s var(--spring)}
 .eseg button:active{scale:.92}
 .eseg button[aria-pressed="true"]{background:var(--cream);color:#2a241e}
 .ehint{font-size:11.5px;line-height:1.45;color:var(--faint);margin:0 0 12px}
@@ -439,11 +439,11 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <h4 style="margin-top:4px">Edit rules</h4>
   <div class="row"><span>Use edit rules</span><button class="toggle" id="tRules" role="switch"></button></div>
   <div class="erules" id="eRules">
-  <div class="erow"><i style="background:var(--R)"></i><div class="eseg" data-rc="r"><button data-v="free">Free</button><button data-v="rewrite">Rewrite only</button><button data-v="lock">Locked</button></div></div>
-  <div class="erow"><i style="background:var(--Y)"></i><div class="eseg" data-rc="y"><button data-v="free">Free</button><button data-v="rewrite">Rewrite only</button><button data-v="lock">Locked</button></div></div>
-  <div class="erow"><i style="background:var(--G)"></i><div class="eseg" data-rc="g"><button data-v="free">Free</button><button data-v="rewrite">Rewrite only</button><button data-v="lock">Locked</button></div></div>
+  <div class="erow"><i style="background:var(--R)"></i><div class="eseg" data-rc="r"><button data-v="free">Free</button><button data-v="rewrite">Rewrite</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
+  <div class="erow"><i style="background:var(--Y)"></i><div class="eseg" data-rc="y"><button data-v="free">Free</button><button data-v="rewrite">Rewrite</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
+  <div class="erow"><i style="background:var(--G)"></i><div class="eseg" data-rc="g"><button data-v="free">Free</button><button data-v="rewrite">Rewrite</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
   </div>
-  <p class="ehint">Free: edit anything. Rewrite only: no tweaking. Try to change a finished sentence and the whole thing gets selected, so whatever you type next replaces it. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
+  <p class="ehint">Free: edit anything. Rewrite: no tweaking. Try to change a finished sentence and the whole thing gets selected, so whatever you type next replaces it. Forward: no backspacing or going back in, even on the sentence you're writing. Just keep typing. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
 </div>
 
 <div class="veil" id="veilDocs" hidden></div>
@@ -875,10 +875,14 @@ function ruleBlock(A, B) {
     const { txt, out } = sentSpans(p);
     const a = pi === A.p ? A.o : 0, b = pi === B.p ? B.o : txt.length;
     if (!ins && a >= b) continue;
-    if (rw && rw.p === pi && a >= rw.s && b <= rw.e) continue;
+    const inRw = rw && rw.p === pi && a >= rw.s && b <= rw.e;
     for (const x of out) {
-      if (!x.done) continue;
       const rule = ruleOf(x.c); if (rule === 'free') continue;
+      if (rule === 'forward') {
+        if (ins ? (a > x.s && a < x.e) : (a < x.e && b > x.s)) return { ...x, rule, p: pi };
+        continue;
+      }
+      if (!x.done || inRw) continue;
       // the sentence you just finished stays open until you start the next one
       if (caret && caret.p === pi && caret.o >= x.e && !txt.slice(x.e).trim()) continue;
       const hit = ins ? (a > x.s && a < x.e) : (a < x.e && b > x.s);
@@ -898,7 +902,8 @@ function refuseEdit(x) {
     if (mode !== x.c) setMode(x.c, { typingOnly: true });
     const p = paras()[x.p]; if (p) { p.classList.remove('rflash'); void p.offsetWidth; p.classList.add('rflash'); setTimeout(() => p.classList.remove('rflash'), 800); }
     ruleToast(nm + ' is rewrite only. Type to replace the whole sentence.');
-  } else ruleToast(nm + ' sentences are locked.');
+  } else if (x.rule === 'forward') ruleToast(nm + ' is forward only. Keep going.');
+  else ruleToast(nm + ' sentences are locked.');
   blip('n', true);
 }
 function editRange(e) {
