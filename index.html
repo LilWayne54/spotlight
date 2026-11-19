@@ -136,6 +136,19 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .ehint{font-size:11.5px;line-height:1.45;color:var(--faint);margin:0 0 12px}
 #ed .rflash{animation:rflash .7s ease-out}
 @keyframes rflash{0%{box-shadow:0 0 0 3px rgba(255,255,255,.55);border-radius:3px}100%{box-shadow:0 0 0 3px rgba(255,255,255,0);border-radius:3px}}
+.prow{display:flex;align-items:center;gap:9px;margin:0 0 9px;font-size:12px;color:var(--dim)}
+.prow>i{flex:none;width:14px;height:14px;border-radius:50%}
+.prow .toggle{flex:none}
+.prow label{display:flex;align-items:center;gap:5px;white-space:nowrap;transition:opacity .2s}
+.prow.off label{opacity:.35;pointer-events:none}
+.pnum{width:50px;padding:5px 4px;border:0;outline:none;border-radius:8px;background:rgba(255,255,255,.08);color:var(--cream);font:inherit;font-size:12px;text-align:center;user-select:text;-webkit-user-select:text;-moz-appearance:textfield;appearance:textfield}
+.pnum::-webkit-inner-spin-button,.pnum::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.pnum.sm{width:36px}
+.pnum:focus{background:rgba(255,255,255,.14)}
+.lpts{position:absolute;right:-6px;bottom:-6px;min-width:18px;height:15px;padding:0 4px;border-radius:99px;background:#1b1714;color:var(--cream);font:700 9.5px/15px system-ui,sans-serif;text-align:center;box-shadow:0 0 0 1.5px var(--lc);pointer-events:none;z-index:2}
+.lpts.empty{color:#ff8a82}
+.lpts.hit{animation:lptshit .35s ease-out}
+@keyframes lptshit{0%{scale:1}40%{scale:1.4}100%{scale:1}}
 .linkbtn{font-size:12px;color:var(--dim);padding:4px 8px;border-radius:8px}
 .linkbtn:hover{background:rgba(255,255,255,.08);color:var(--cream)}
 .doc span[class*=" k-"]{box-shadow:inset 0 -2px 0 rgba(124,92,214,.75)}
@@ -443,7 +456,12 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="erow"><i style="background:var(--Y)"></i><div class="eseg" data-rc="y"><button data-v="free">Free</button><button data-v="rewrite">Rewrite</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
   <div class="erow"><i style="background:var(--G)"></i><div class="eseg" data-rc="g"><button data-v="free">Free</button><button data-v="rewrite">Rewrite</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
   </div>
-  <p class="ehint">Free: edit anything. Rewrite: no tweaking. Try to change a finished sentence and the whole thing gets selected, so whatever you type next replaces it. Forward: no backspacing or going back in, even on the sentence you're writing. Just keep typing. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
+  <p class="ehint" id="ehintRules">Free: edit anything. Rewrite: no tweaking. Try to change a finished sentence and the whole thing gets selected, so whatever you type next replaces it. Forward: no backspacing or going back in, even on the sentence you're writing. Just keep typing. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
+  <h4 style="margin-top:4px">Edit points</h4>
+  <div class="prow" data-pc="r"><i style="background:var(--R)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
+  <div class="prow" data-pc="y"><i style="background:var(--Y)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
+  <div class="prow" data-pc="g"><i style="background:var(--G)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
+  <p class="ehint">Writing earns a color points, up to its max. Deleting costs one point per character removed, and typing into the middle of a sentence costs one per character. When a color runs out, its text can't change until you write more in that color. The count shows on each light.</p>
 </div>
 
 <div class="veil" id="veilDocs" hidden></div>
@@ -921,16 +939,78 @@ function editRange(e) {
   return [s.f, s.f];
 }
 function ruleGate(e) {
-  if (!rulesActive()) return false;
+  const rOn = rulesActive(), pOn = ptsActive();
+  if (!rOn && !pOn) return false;
   const t = e.inputType || '';
   if (!(t.startsWith('insert') || t.startsWith('delete'))) return false;
   const r = editRange(e); if (!r) return false;
-  if (rw && !(r[0].p === rw.p && r[1].p === rw.p && r[0].o >= rw.s && r[1].o <= rw.e)) rw = null;
-  const x = ruleBlock(r[0], r[1]);
-  if (!x) { if (ruleBlock.cover) rw = ruleBlock.cover; return false; }
-  refuseEdit(x); return true;
+  if (rOn) {
+    if (rw && !(r[0].p === rw.p && r[1].p === rw.p && r[0].o >= rw.s && r[1].o <= rw.e)) rw = null;
+    const x = ruleBlock(r[0], r[1]);
+    if (x) { refuseEdit(x); return true; }
+  }
+  if (pOn) {
+    const ins = (t === 'insertParagraph' || t === 'insertLineBreak') ? '\n' : t.startsWith('insert') ? ((e.data != null ? e.data : (e.dataTransfer ? e.dataTransfer.getData('text/plain') : '')) || '') : '';
+    if (!ptsCharge(r[0], r[1], ins, t === 'insertText')) return true;
+  }
+  if (rOn && ruleBlock.cover) rw = ruleBlock.cover;
+  return false;
 }
 document.addEventListener('selectionchange', () => { if (!rw) return; const s = getSel(); if (s && collapsed(s) && (s.f.p !== rw.p || s.f.o < rw.s || s.f.o > rw.e)) rw = null; });
+
+/* ---------- edit points ---------- */
+const PTS_DEF = { on: false, max: 50, rate: 1 };
+const ptsCfg = c => Object.assign({}, PTS_DEF, settings.pts && settings.pts[c]);
+const ptsOn = c => (c === 'r' || c === 'y' || c === 'g') && !!ptsCfg(c).on;
+const ptsActive = () => ['r', 'y', 'g'].some(ptsOn);
+const bal = c => { const b = settings.ptsBal && settings.ptsBal[c]; return Math.min(typeof b === 'number' ? b : ptsCfg(c).max, ptsCfg(c).max); };
+let ptsAcc = { r: 0, y: 0, g: 0 }, ptsSaveT = 0;
+function setBal(c, v) { settings.ptsBal = Object.assign({}, settings.ptsBal, { [c]: Math.max(0, Math.min(ptsCfg(c).max, v)) }); clearTimeout(ptsSaveT); ptsSaveT = setTimeout(saveSettings, 800); }
+function paintPts(hit) {
+  for (const l of document.querySelectorAll('.lamp')) {
+    const c = l.dataset.c; let b = l.querySelector('.lpts');
+    if (!ptsOn(c)) { if (b) b.remove(); continue; }
+    if (!b) { b = document.createElement('b'); b.className = 'lpts'; l.appendChild(b); }
+    const v = Math.floor(bal(c)); b.textContent = v; b.classList.toggle('empty', v <= 0);
+    if (hit && hit[c]) { b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit'); }
+  }
+}
+function countRange(A, B, out) {
+  const ps = paras();
+  for (let pi = A.p; pi <= B.p; pi++) {
+    const p = ps[pi]; if (!p) continue;
+    const runs = pToRuns(p), len = runs.reduce((x, r) => x + r.t.length, 0);
+    const a = pi === A.p ? A.o : 0, b = pi === B.p ? B.o : len;
+    let acc = 0;
+    for (const r of runs) { const s0 = Math.max(a, acc), e0 = Math.min(b, acc + r.t.length); if (e0 > s0) out[r.c] = (out[r.c] || 0) + (e0 - s0); acc += r.t.length; }
+  }
+  return out;
+}
+function ptsCharge(A, B, ins, earnable) {
+  const isIns = A.p === B.p && A.o === B.o, cost = {};
+  if (!isIns) countRange(A, B, cost);
+  let inside = null;
+  if (isIns && ins) { const p = paras()[A.p]; if (p) for (const x of sentSpans(p).out) if (A.o > x.s && A.o < x.e) inside = x; }
+  if (inside) cost[inside.c] = (cost[inside.c] || 0) + [...ins].length;
+  const need = {};
+  for (const c of ['r', 'y', 'g']) if (cost[c] && ptsOn(c)) need[c] = cost[c];
+  for (const c in need) if (bal(c) < need[c]) {
+    const h = Math.floor(bal(c)), nm = NAMES[c].toLowerCase();
+    ruleToast(h ? `That needs ${need[c]} ${nm} point${need[c] > 1 ? 's' : ''}. You have ${h}.` : `Out of ${nm} points. Write more ${nm} to earn some.`);
+    blip('n', true); paintPts(need); return false;
+  }
+  for (const c in need) setBal(c, bal(c) - need[c]);
+  if (earnable && isIns && !inside && ptsOn(mode)) {
+    const n = ins.replace(/\s/g, '').length;
+    if (n) {
+      ptsAcc[mode] += n / Math.max(1, ptsCfg(mode).rate);
+      const w = Math.floor(ptsAcc[mode]);
+      if (w) { ptsAcc[mode] -= w; if (bal(mode) < ptsCfg(mode).max) setBal(mode, bal(mode) + w); }
+    }
+  }
+  paintPts(need);
+  return true;
+}
 
 /* ---------- input handling ---------- */
 ed.addEventListener('beforeinput', e => {
@@ -972,9 +1052,17 @@ ed.addEventListener('compositionstart', () => { composing = true; pushUndo('othe
 ed.addEventListener('compositionend', () => { composing = false; clean(); changed(); });
 ed.addEventListener('paste', e => {
   e.preventDefault();
-  if (rulesActive()) { const s = getSel(); if (s) { const [A, B] = ordered(s); if (rw && !(A.p === rw.p && B.p === rw.p && A.o >= rw.s && B.o <= rw.e)) rw = null; const x = ruleBlock(A, B); if (x) { refuseEdit(x); return; } if (ruleBlock.cover) rw = ruleBlock.cover; } }
   const t = (e.clipboardData.getData('text/plain') || '').replace(/\r\n?/g, '\n');
   if (!t) return;
+  if (rulesActive() || ptsActive()) {
+    const s = getSel();
+    if (s) {
+      const [A, B] = ordered(s), rOn = rulesActive();
+      if (rOn) { if (rw && !(A.p === rw.p && B.p === rw.p && A.o >= rw.s && B.o <= rw.e)) rw = null; const x = ruleBlock(A, B); if (x) { refuseEdit(x); return; } }
+      if (ptsActive() && !ptsCharge(A, B, t, false)) return;
+      if (rOn && ruleBlock.cover) rw = ruleBlock.cover;
+    }
+  }
   pushUndo('paste', true);
   insertMulti(t, { c: 'n', b: false, i: false, u: false });
   changed();
@@ -1050,6 +1138,14 @@ function applySettings() {
   $('tRun').setAttribute('aria-checked', settings.runCards !== false);
   for (const b of $('seg').children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
   $('tRules').setAttribute('aria-checked', settings.rulesOn !== false);
+  for (const row of document.querySelectorAll('.prow')) {
+    const c = row.dataset.pc, cfg = ptsCfg(c);
+    row.querySelector('.toggle').setAttribute('aria-checked', !!cfg.on); row.classList.toggle('off', !cfg.on);
+    const mx = row.querySelector('.pmax'), rt = row.querySelector('.prate');
+    if (document.activeElement !== mx) mx.value = cfg.max;
+    if (document.activeElement !== rt) rt.value = cfg.rate;
+  }
+  paintPts();
   $('eRules').classList.toggle('off', settings.rulesOn === false);
   for (const g of document.querySelectorAll('.eseg')) { const v = (settings.rules && settings.rules[g.dataset.rc]) || RULE_DEF[g.dataset.rc]; for (const b of g.children) b.setAttribute('aria-pressed', b.dataset.v === v); }
   if (typeof pagesOn !== 'undefined') { applyZoom(); schedulePages(); }
@@ -2273,6 +2369,17 @@ $('zUp').onclick = () => setZoom((settings.zoom || 1) * 1.1);
 for (const [id, c] of [['dR', 'r'], ['dY', 'y'], ['dG', 'g']]) {
   $(id).addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
   $(id).addEventListener('input', e => { grow(e.target); settings.desc = Object.assign({}, settings.desc, { [c]: e.target.value }); saveSettings(); updateModeUI(false); });
+}
+function setPts(c, patch) { settings.pts = Object.assign({}, settings.pts, { [c]: Object.assign(ptsCfg(c), patch) }); saveSettings(); applySettings(); }
+for (const row of document.querySelectorAll('.prow')) {
+  const c = row.dataset.pc, tg = row.querySelector('.toggle');
+  tg.addEventListener('mousedown', e => e.preventDefault());
+  tg.onclick = () => { const on = !ptsCfg(c).on; if (on) setBal(c, ptsCfg(c).max); setPts(c, { on }); blip(c, true); };
+  for (const [sel, k, lo, hi] of [['.pmax', 'max', 1, 9999], ['.prate', 'rate', 1, 99]]) {
+    const inp = row.querySelector(sel);
+    inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => { let v = parseInt(inp.value, 10); if (!(v >= lo)) v = PTS_DEF[k]; v = Math.min(hi, v); inp.value = v; setPts(c, { [k]: v }); });
+  }
 }
 $('tRules').onclick = () => { settings.rulesOn = settings.rulesOn === false; saveSettings(); applySettings(); blip('g', true); };
 for (const g of document.querySelectorAll('.eseg')) for (const b of g.children) { b.addEventListener('mousedown', e => e.preventDefault()); b.onclick = () => { settings.rules = Object.assign({}, RULE_DEF, settings.rules, { [g.dataset.rc]: b.dataset.v }); saveSettings(); applySettings(); blip(g.dataset.rc, true); }; }
