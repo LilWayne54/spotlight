@@ -152,6 +152,17 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .lpts.empty{color:#ff8a82}
 .lpts.hit{animation:lptshit .35s ease-out}
 @keyframes lptshit{0%{scale:1}40%{scale:1.4}100%{scale:1}}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.pchip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:99px;background:rgba(255,255,255,.08);font-size:12px;font-weight:600;color:var(--dim);transition:background .18s,color .18s,scale .25s var(--spring)}
+.pchip:active{scale:.93}
+.pchip[aria-pressed="true"]{background:var(--cream);color:#2a241e}
+.pchip .px{opacity:.55;font-size:13px;line-height:1;padding:0 0 0 2px}
+.pchip.add{background:transparent;color:var(--faint);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.lockrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0 0 14px;font-size:12px;color:var(--dim)}
+.lockrow .lk{flex:1 1 100%;display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.06);color:var(--cream);font-weight:600}
+.lockrow .lk svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lockrow .lk small{font-weight:400;color:var(--dim)}
+body.ruleslocked #presetRow,body.ruleslocked #rulesRow,body.ruleslocked #eRules,body.ruleslocked .prow{opacity:.4;pointer-events:none}
 .linkbtn{font-size:12px;color:var(--dim);padding:4px 8px;border-radius:8px}
 .linkbtn:hover{background:rgba(255,255,255,.08);color:var(--cream)}
 .doc span[class*=" k-"]{box-shadow:inset 0 -2px 0 rgba(124,92,214,.75)}
@@ -454,7 +465,9 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="meaning"><i style="background:var(--G)"></i><textarea id="dG" rows="1" maxlength="80" placeholder="trying · bashing"></textarea></div>
   <div class="row" style="justify-content:flex-end;margin-top:-2px"><button class="linkbtn" id="dReset">Reset to defaults</button></div>
   <h4 style="margin-top:4px">Edit rules</h4>
-  <div class="row"><span>Use edit rules</span><button class="toggle" id="tRules" role="switch"></button></div>
+  <div class="lockrow" id="lockRow"></div>
+  <div class="presets" id="presetRow"></div>
+  <div class="row" id="rulesRow"><span>Use edit rules</span><button class="toggle" id="tRules" role="switch"></button></div>
   <div class="erules" id="eRules">
   <div class="erow"><i style="background:var(--R)"></i><div class="eseg" data-rc="r"><button data-v="free">Free</button><button data-v="strike">Strike</button><button data-v="alternate">Alternate</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
   <div class="erow"><i style="background:var(--Y)"></i><div class="eseg" data-rc="y"><button data-v="free">Free</button><button data-v="strike">Strike</button><button data-v="alternate">Alternate</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
@@ -1006,6 +1019,102 @@ function sentAction() {
   lastKind = null; changed();
 }
 
+/* ---------- rule presets & lock ---------- */
+const RP_BUILTIN = [
+  { id: 'open', name: 'Open', rules: { r: 'free', y: 'free', g: 'free' }, pts: { r: { on: false }, y: { on: false }, g: { on: false } } },
+  { id: 'steady', name: 'Steady', rules: { r: 'forward', y: 'strike', g: 'free' }, pts: { r: { on: false }, y: { on: true, max: 5, rate: 10 }, g: { on: false } } },
+  { id: 'strict', name: 'Strict', rules: { r: 'forward', y: 'forward', g: 'strike' }, pts: { r: { on: false }, y: { on: false }, g: { on: true, max: 20, rate: 5 } } }
+];
+const rawRule = c => { const v = (settings.rules && settings.rules[c]) || RULE_DEF[c]; return v === 'rewrite' ? 'strike' : v; };
+const rulesLocked = () => !!settings.ruleLock && Date.now() < settings.ruleLock;
+const fmtWhen = t => new Date(t).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+function lockedNope() { if (!rulesLocked()) return false; toast('Rules are locked until ' + fmtWhen(settings.ruleLock) + '.'); blip('n', true); return true; }
+function presetMatches(pr) {
+  if (settings.rulesOn === false) return false;
+  return ['r', 'y', 'g'].every(c => {
+    const a = ptsCfg(c), b = Object.assign({}, PTS_DEF, pr.pts[c]);
+    return rawRule(c) === pr.rules[c] && !!a.on === !!b.on && (!a.on || (a.max === b.max && a.rate === b.rate));
+  });
+}
+function applyPreset(pr) {
+  if (lockedNope()) return;
+  settings.rulesOn = true;
+  settings.rules = Object.assign({}, pr.rules);
+  settings.pts = {}; for (const c of ['r', 'y', 'g']) settings.pts[c] = Object.assign({}, PTS_DEF, pr.pts[c]);
+  settings.ptsBal = {};
+  saveSettings(); applySettings(); blip('g', true); toast('Using ' + pr.name + '.');
+}
+function askText(msg, ph, okLabel, valid) {
+  return new Promise(res => {
+    const v = document.createElement('div'); v.className = 'mveil';
+    const m = document.createElement('div'); m.className = 'modal';
+    const p = document.createElement('p'); p.textContent = msg; m.appendChild(p);
+    const inp = document.createElement('input'); inp.className = 'pname'; inp.placeholder = ph; inp.maxLength = 40; m.appendChild(inp);
+    const row = document.createElement('div'); row.className = 'btns';
+    const done = a => { v.remove(); res(a); };
+    const c = document.createElement('button'); c.textContent = 'Cancel'; c.onclick = () => done(null);
+    const ok = document.createElement('button'); ok.textContent = okLabel; ok.className = 'main';
+    const upd = () => { ok.disabled = !valid(inp.value); ok.style.opacity = ok.disabled ? .4 : 1; };
+    ok.onclick = () => { if (!ok.disabled) done(inp.value.trim()); };
+    inp.addEventListener('input', upd);
+    inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') ok.onclick(); if (e.key === 'Escape') done(null); });
+    row.append(c, ok); m.appendChild(row); v.appendChild(m); document.body.appendChild(v);
+    v.addEventListener('mousedown', e => { if (e.target === v) done(null); });
+    upd(); setTimeout(() => inp.focus(), 30);
+  });
+}
+async function saveCurrentPreset() {
+  if (lockedNope()) return;
+  const name = await askText('Name this set of edit rules and points.', 'e.g. Sprint night', 'Save', v => !!v.trim());
+  if (!name) return;
+  const pr = { id: 'u' + Date.now().toString(36), name, rules: {}, pts: {} };
+  for (const c of ['r', 'y', 'g']) { pr.rules[c] = rawRule(c); pr.pts[c] = ptsCfg(c); }
+  settings.rulePresets = (settings.rulePresets || []).concat([pr]);
+  if (settings.rulesOn === false) { settings.rulesOn = true; }
+  saveSettings(); applySettings(); toast('Saved ' + name + '.');
+}
+async function deletePreset(pr) {
+  if (lockedNope()) return;
+  const a = await ask('Delete the preset “' + pr.name + '”?', [['cancel', 'Cancel'], ['del', 'Delete', true]]);
+  if (a !== 'del') return;
+  settings.rulePresets = (settings.rulePresets || []).filter(x => x.id !== pr.id);
+  saveSettings(); applySettings();
+}
+async function lockFor(days) {
+  const until = Date.now() + days * 86400000;
+  const a = await ask(`Lock your edit rules and points for ${days === 1 ? 'a day' : days === 7 ? 'a week' : days + ' days'}? They'll stay exactly as they are until ${fmtWhen(until)}.`, [['cancel', 'Cancel'], ['ok', 'Lock them', true]]);
+  if (a !== 'ok') return;
+  settings.ruleLock = until; saveSettings(); applySettings(); blip('r', false); toast('Locked. Go write.');
+}
+async function unlockEarly() {
+  const v = await askText('Unlocking early is the fiddling this lock is here to stop. If you really mean it, type: change the rules', 'change the rules', 'Unlock', x => x.trim().toLowerCase() === 'change the rules');
+  if (!v) return;
+  settings.ruleLock = 0; saveSettings(); applySettings(); toast('Unlocked.');
+}
+function renderRulesUI() {
+  const lk = rulesLocked();
+  document.body.classList.toggle('ruleslocked', lk);
+  const lr = $('lockRow'); lr.textContent = '';
+  const lockSvg = '<svg viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.6"/><path d="M5.2 7V5a2.8 2.8 0 0 1 5.6 0v2"/></svg>';
+  if (lk) {
+    const d = document.createElement('div'); d.className = 'lk'; d.innerHTML = lockSvg + '<span>Locked until ' + escH(fmtWhen(settings.ruleLock)) + '</span>'; lr.appendChild(d);
+    const u = document.createElement('button'); u.className = 'linkbtn'; u.textContent = 'Unlock early…'; u.onclick = unlockEarly; lr.appendChild(u);
+  } else {
+    const t = document.createElement('span'); t.textContent = 'Lock rules for'; lr.appendChild(t);
+    for (const [d, l] of [[1, '1 day'], [3, '3 days'], [7, '1 week']]) { const b = document.createElement('button'); b.className = 'pchip'; b.textContent = l; b.onclick = () => lockFor(d); lr.appendChild(b); }
+  }
+  const row = $('presetRow'); row.textContent = '';
+  for (const pr of RP_BUILTIN.concat(settings.rulePresets || [])) {
+    const b = document.createElement('button'); b.className = 'pchip'; b.setAttribute('aria-pressed', presetMatches(pr));
+    const n = document.createElement('span'); n.textContent = pr.name; b.appendChild(n);
+    b.onclick = () => applyPreset(pr);
+    if (!RP_BUILTIN.includes(pr)) { const x = document.createElement('span'); x.className = 'px'; x.textContent = '×'; x.title = 'Delete preset'; x.onclick = e => { e.stopPropagation(); deletePreset(pr); }; b.appendChild(x); }
+    row.appendChild(b);
+  }
+  const add = document.createElement('button'); add.className = 'pchip add'; add.textContent = '+ Save current'; add.onclick = saveCurrentPreset; row.appendChild(add);
+}
+setInterval(() => { if (settings.ruleLock && Date.now() >= settings.ruleLock) { settings.ruleLock = 0; saveSettings(); applySettings(); } }, 30000);
+
 /* ---------- edit points ---------- */
 const PTS_DEF = { on: false, max: 50, rate: 1 };
 const ptsCfg = c => Object.assign({}, PTS_DEF, settings.pts && settings.pts[c]);
@@ -1187,6 +1296,7 @@ function applySettings() {
   $('tRun').setAttribute('aria-checked', settings.runCards !== false);
   for (const b of $('seg').children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
   $('tRules').setAttribute('aria-checked', settings.rulesOn !== false);
+  renderRulesUI();
   for (const row of document.querySelectorAll('.prow')) {
     const c = row.dataset.pc, cfg = ptsCfg(c);
     row.querySelector('.toggle').setAttribute('aria-checked', !!cfg.on); row.classList.toggle('off', !cfg.on);
@@ -2422,19 +2532,19 @@ for (const [id, c] of [['dR', 'r'], ['dY', 'y'], ['dG', 'g']]) {
   $(id).addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
   $(id).addEventListener('input', e => { grow(e.target); settings.desc = Object.assign({}, settings.desc, { [c]: e.target.value }); saveSettings(); updateModeUI(false); });
 }
-function setPts(c, patch) { settings.pts = Object.assign({}, settings.pts, { [c]: Object.assign(ptsCfg(c), patch) }); saveSettings(); applySettings(); }
+function setPts(c, patch) { if (lockedNope()) { applySettings(); return; } settings.pts = Object.assign({}, settings.pts, { [c]: Object.assign(ptsCfg(c), patch) }); saveSettings(); applySettings(); }
 for (const row of document.querySelectorAll('.prow')) {
   const c = row.dataset.pc, tg = row.querySelector('.toggle');
   tg.addEventListener('mousedown', e => e.preventDefault());
-  tg.onclick = () => { const on = !ptsCfg(c).on; if (on) setBal(c, ptsCfg(c).max); setPts(c, { on }); blip(c, true); };
+  tg.onclick = () => { if (lockedNope()) return; const on = !ptsCfg(c).on; if (on) setBal(c, ptsCfg(c).max); setPts(c, { on }); blip(c, true); };
   for (const [sel, k, lo, hi] of [['.pmax', 'max', 1, 9999], ['.prate', 'rate', 1, 99]]) {
     const inp = row.querySelector(sel);
     inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); });
     inp.addEventListener('change', () => { let v = parseInt(inp.value, 10); if (!(v >= lo)) v = PTS_DEF[k]; v = Math.min(hi, v); inp.value = v; setPts(c, { [k]: v }); });
   }
 }
-$('tRules').onclick = () => { settings.rulesOn = settings.rulesOn === false; saveSettings(); applySettings(); blip('g', true); };
-for (const g of document.querySelectorAll('.eseg')) for (const b of g.children) { b.addEventListener('mousedown', e => e.preventDefault()); b.onclick = () => { settings.rules = Object.assign({}, RULE_DEF, settings.rules, { [g.dataset.rc]: b.dataset.v }); saveSettings(); applySettings(); blip(g.dataset.rc, true); }; }
+$('tRules').onclick = () => { if (lockedNope()) return; settings.rulesOn = settings.rulesOn === false; saveSettings(); applySettings(); blip('g', true); };
+for (const g of document.querySelectorAll('.eseg')) for (const b of g.children) { b.addEventListener('mousedown', e => e.preventDefault()); b.onclick = () => { if (lockedNope()) return; settings.rules = Object.assign({}, RULE_DEF, settings.rules, { [g.dataset.rc]: b.dataset.v }); saveSettings(); applySettings(); blip(g.dataset.rc, true); }; }
 $('dReset').onclick = () => { settings.desc = {}; saveSettings(); for (const id of ['dR', 'dY', 'dG']) { $(id).value = ''; grow($(id)); } updateModeUI(false); };
 function grow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
 function fillDesc() { const d = settings.desc || {}; $('dR').value = d.r || ''; $('dY').value = d.y || ''; $('dG').value = d.g || ''; for (const id of ['dR', 'dY', 'dG']) requestAnimationFrame(() => grow($(id))); }
