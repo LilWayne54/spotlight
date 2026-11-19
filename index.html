@@ -165,6 +165,78 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .modal input.pname{display:block;width:100%;margin:0 0 14px;padding:9px 11px;border:0;outline:none;border-radius:10px;background:rgba(255,255,255,.09);color:var(--cream);font-size:15px;user-select:text;-webkit-user-select:text}
 .modal .tiny{margin:-2px 0 14px;font-size:12px;color:var(--faint)}
 .modal .btns .del{margin-right:auto;background:transparent;color:#ff9a8a}
+
+/* ---- flow layer ---- */
+body[data-mode="r"]{--mc:#e5534b} body[data-mode="y"]{--mc:#f2c230} body[data-mode="g"]{--mc:#4cbb5e} body[data-mode="n"]{--mc:#bfb6a8}
+.page{transition:box-shadow .8s var(--ease)}
+.flowfx .page{box-shadow:0 1px 2px rgba(0,0,0,.3),0 14px 40px -12px rgba(0,0,0,.55),0 0 calc(var(--flow,0) * 60px) calc(var(--flow,0) * 4px) color-mix(in srgb,var(--mc) calc(var(--flow,0) * 60%),transparent)}
+.flowfx.paged .page{box-shadow:none}
+.housing{position:relative}
+.combo{position:absolute;z-index:3;top:-7px;right:-10px;min-width:24px;padding:1px 6px;border-radius:99px;background:var(--mc);color:#1d1915;font:800 11px/16px system-ui,sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.4);cursor:pointer;transition:scale .3s var(--spring)}
+.combo:empty{display:none}
+.combo.cpop{animation:cpop .45s var(--spring)}
+@keyframes cpop{0%{scale:.6}55%{scale:1.35}}
+.combo[data-lv="2"]{box-shadow:0 0 10px 1px var(--mc)} .combo[data-lv="3"]{box-shadow:0 0 14px 3px var(--mc)}
+.combo[data-lv="4"],.combo[data-lv="5"]{box-shadow:0 0 20px 5px var(--mc);animation:glowy 1.6s ease-in-out infinite}
+@keyframes glowy{50%{filter:brightness(1.25)}}
+.lane{display:flex;align-items:center;gap:5px;padding:0 2px}
+.lane:empty{display:none}
+.lane i{width:9px;height:9px;border-radius:50%;opacity:.85;transition:opacity .3s}
+.lane i:first-child{width:13px;height:13px;opacity:1;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+.lane i:nth-child(4){opacity:.5} .lane i:nth-child(5){opacity:.28}
+.lane i.pn{background:transparent !important;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
+.lane.slide{animation:lane .35s var(--ease)}
+@keyframes lane{from{translate:14px 0;opacity:.3}}
+.fxlayer{position:fixed;inset:0;pointer-events:none;z-index:50;overflow:hidden}
+.spark{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);animation:spark .7s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes spark{to{translate:var(--dx) var(--dy);scale:.2;opacity:0}}
+.ring{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;border:2px solid var(--c);animation:ring .55s ease-out forwards}
+@keyframes ring{to{scale:5;opacity:0}}
+@media (prefers-reduced-motion:reduce){.spark,.ring{display:none}.combo.cpop,.lane.slide{animation:none}}
+.darechip{position:sticky;top:10px;z-index:3;display:flex;align-items:center;gap:8px;width:max-content;max-width:calc(100% - 30px);margin:10px auto -40px;padding:7px 8px 7px 14px;border-radius:99px;background:#2d2823;color:var(--cream);box-shadow:0 0 0 1.5px var(--mc),0 8px 24px -6px rgba(0,0,0,.6);font-size:13px;animation:drop2 .3s var(--spring)}
+@keyframes drop2{from{translate:0 -10px;opacity:0}}
+.darechip b{color:var(--mc);font-weight:700;white-space:nowrap}
+.darechip span{min-width:0}
+.darechip button{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:var(--dim)}
+.darechip button:hover,.darechip button:active{background:rgba(255,255,255,.1);color:var(--cream)}
+.darechip.done{animation:dareout .6s var(--ease) forwards}
+@keyframes dareout{40%{scale:1.08;box-shadow:0 0 0 3px var(--mc),0 0 30px var(--mc)}100%{scale:.9;opacity:0}}
+.runcard{position:fixed;z-index:45;right:18px;bottom:46px;width:300px;padding:16px;border-radius:18px;background:#2d2823;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 20px 50px -10px rgba(0,0,0,.7);animation:drop2 .35s var(--spring)}
+.runcard h5{margin:0 0 2px;font-size:15px}
+.runcard .sub{font-size:12px;color:var(--faint);margin-bottom:12px}
+.runcard .trail{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 12px}
+.runcard .trail i{width:10px;height:10px;border-radius:50%}
+.runcard .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.runcard .stats div{padding:8px 6px;border-radius:10px;background:rgba(255,255,255,.06);text-align:center}
+.runcard .stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.runcard .stats small{font-size:10.5px;color:var(--faint)}
+.runcard button{width:100%;padding:9px;border-radius:11px;background:var(--cream);color:#2a241e;font-weight:600;text-align:center}
+/* ---- beats ---- */
+.beatbar{flex:none;position:relative;background:#26211c;box-shadow:0 1px 0 rgba(255,255,255,.05),inset 0 -1px 0 rgba(0,0,0,.3)}
+.beatbar svg{display:block;width:100%;height:118px;touch-action:none}
+.beatbar .bbtools{position:absolute;top:6px;right:8px;display:flex;gap:4px}
+.beatbar .bbtools button{padding:4px 9px;border-radius:8px;font-size:12px;font-weight:600;color:var(--dim);background:rgba(255,255,255,.06)}
+.beatbar .bbtools button:hover,.beatbar .bbtools button:active{background:rgba(255,255,255,.12);color:var(--cream)}
+.beatbar .bbtools .addb{background:#7c5cd6;color:#fff}
+.beatbar .bbedit{position:absolute;left:10px;top:6px;display:flex;align-items:center;gap:6px}
+.beatbar .bbedit input{width:220px;max-width:46vw;padding:5px 9px;border:0;outline:none;border-radius:8px;background:rgba(255,255,255,.1);color:var(--cream);font:inherit;font-size:12.5px;user-select:text;-webkit-user-select:text}
+.beatbar .bbedit button{padding:4px 8px;border-radius:8px;font-size:12px;color:#ff9a8a}
+.beatbar .bbedit button:hover{background:rgba(255,120,100,.14)}
+.beatbar .empty{position:absolute;left:0;right:0;top:50px;text-align:center;font-size:12.5px;color:var(--faint);pointer-events:none}
+.bpt{cursor:grab}
+.bpt circle.hit{fill:transparent}
+.bpt circle.bdot{fill:#7c5cd6;stroke:#efe7ff;stroke-width:2;transition:r .15s}
+.bpt.sel circle.bdot{fill:#b9a2ff}
+.bpt text{fill:var(--cream);font:600 11px system-ui,sans-serif;paint-order:stroke;stroke:#26211c;stroke-width:3px}
+.doc p[data-beat]{position:relative}
+.doc p[data-beat]::before{content:"◆ " attr(data-blabel);display:block;text-indent:0;margin:.3em 0 .1em;font:600 11px/1.3 system-ui,sans-serif;color:#7c5cd6;font-style:normal}
+.foot .fb{flex:none;width:30px;height:24px;border-radius:7px;display:grid;place-items:center;color:var(--dim)}
+.foot .fb:active,.foot .fb[aria-pressed="true"]{background:rgba(255,255,255,.12);color:var(--cream)}
+.foot .fb svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.foot{justify-content:flex-start}
+.foot #counts{margin-left:auto}
+.runcard{left:12px;right:12px;width:auto;bottom:calc(var(--sb) + 36px)}
+.beatbar svg{height:104px}
 .toggle{width:46px;height:28px;border-radius:99px;background:rgba(255,255,255,.14);position:relative;transition:background .2s}
 .toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:translate .25s var(--spring)}
 .toggle[aria-checked="true"]{background:var(--G)}
@@ -213,7 +285,7 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
     <button class="ib" id="bShare" title="Export .docx"><svg viewBox="0 0 20 20"><path d="M10 13V2.5 M6.5 6 10 2.5 13.5 6 M5 9H4v8.5h12V9h-1"/></svg></button>
   </div>
   <div class="row2">
-    <div class="housing">
+    <div class="housing"><span class="combo" id="combo" title="Combo: sentences in a row. Click for this run."></span>
       <button class="lamp r" data-c="r" title="Red: not trying, no bashing"></button>
       <button class="lamp y" data-c="y" title="Yellow: trying, no bashing"></button>
       <button class="lamp g" data-c="g" title="Green: trying, bashing"></button>
@@ -228,13 +300,15 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
   </div>
   <div class="tally" id="tally"><i class="tr"></i><i class="ty"></i><i class="tg"></i></div>
 </header>
+<div class="beatbar" id="beatbar" hidden></div>
 <main class="desk" id="desk">
+  <div class="darechip" id="dare" hidden></div>
   <div class="page" id="page">
     <div class="ph" id="ph">Start anywhere.</div>
     <div id="ed" class="doc" contenteditable="true" spellcheck="true" autocapitalize="sentences"><p><br></p></div>
   </div>
 </main>
-<footer class="foot"><span class="pg" id="pageinfo"></span><span id="counts"></span></footer>
+<footer class="foot"><button class="fb" id="bDare" title="Roll a dare"><svg viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="3"/><circle cx="7" cy="7" r=".9" fill="currentColor"/><circle cx="13" cy="13" r=".9" fill="currentColor"/><circle cx="10" cy="10" r=".9" fill="currentColor"/></svg></button><button class="fb" id="bBeats" title="Story curve" aria-pressed="false"><svg viewBox="0 0 20 20"><path d="M2 12c2.5 0 3-6 5.5-6S10 14 12.5 14 15 8 18 8"/></svg></button><span class="pg" id="pageinfo"></span><span id="counts"></span></footer>
 </div>
 
 <div class="veil" id="veilPop" hidden></div>
@@ -256,6 +330,9 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
   <div class="row"><span>Indent paragraphs</span><button class="toggle" id="tIndent" role="switch"></button></div>
   <div class="row"><span>Drop cap</span><button class="toggle" id="tDrop" role="switch"></button></div>
   <div class="row"><span>Clicky sounds</span><button class="toggle" id="tSound" role="switch"></button></div>
+  <h4 style="margin-top:4px">Game layer</h4>
+  <div class="row"><span>Combos, sparks &amp; glow</span><button class="toggle" id="tFx" role="switch"></button></div>
+  <div class="row"><span>Run cards after a break</span><button class="toggle" id="tRun" role="switch"></button></div>
   <h4 style="margin-top:4px">Custom patterns</h4>
   <div id="patList"></div>
   <div class="row" style="justify-content:flex-start;margin-top:2px"><button class="linkbtn" id="patNew">+ New pattern</button></div>
@@ -281,6 +358,8 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
   <div class="cards" id="cmList"></div>
 </div>
 <input type="file" id="fileIn" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+<div class="fxlayer" id="fx"></div>
+<div class="runcard" id="runcard" hidden></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -357,7 +436,8 @@ function render(p, runs) {
   for (const r of runs) { const s = document.createElement('span'); s.className = keyOf(r); s.textContent = r.t; p.appendChild(s); }
 }
 function canonical(p) {
-  if (p.tagName !== 'P' || p.attributes.length) return false;
+  if (p.tagName !== 'P') return false;
+  for (const a of p.attributes) if (a.name !== 'data-beat' && a.name !== 'data-blabel') return false;
   const ch = p.childNodes;
   if (ch.length === 1 && ch[0].nodeName === 'BR') return true;
   if (!ch.length) return false;
@@ -438,7 +518,7 @@ function clean() {
     } else if (n.nodeType === 3 && !n.data.length) { n.remove(); changed = true; }
     else { if (!cur) { cur = document.createElement('p'); ed.insertBefore(cur, n); } cur.appendChild(n); changed = true; }
   }
-  for (const p of paras()) if (!canonical(p)) { const runs = pToRuns(p); for (const a of [...p.attributes]) p.removeAttribute(a.name); render(p, runs); changed = true; }
+  for (const p of paras()) if (!canonical(p)) { const runs = pToRuns(p); for (const a of [...p.attributes]) if (a.name !== 'data-beat' && a.name !== 'data-blabel') p.removeAttribute(a.name); render(p, runs); changed = true; }
   if (changed && s) setSel(clampSel(s));
   return changed;
 }
@@ -487,6 +567,7 @@ function deleteChar(back) {
       render(p, concatRuns(L, R2)); setSel(at(pi, o - n));
     } else if (pi > 0) {
       const prev = ps[pi - 1], pl = textOf(prev).length;
+      if (p.dataset.beat && !prev.dataset.beat) { prev.dataset.beat = p.dataset.beat; if (p.dataset.blabel) prev.dataset.blabel = p.dataset.blabel; }
       render(prev, concatRuns(pToRuns(prev), runs)); p.remove(); setSel(at(pi - 1, pl));
     }
   } else {
@@ -496,6 +577,7 @@ function deleteChar(back) {
       render(p, concatRuns(L, R2)); setSel(at(pi, o));
     } else if (pi < ps.length - 1) {
       const next = ps[pi + 1];
+      if (next.dataset.beat && !p.dataset.beat) { p.dataset.beat = next.dataset.beat; if (next.dataset.blabel) p.dataset.blabel = next.dataset.blabel; }
       render(p, concatRuns(runs, pToRuns(next))); next.remove(); setSel(at(pi, o));
     }
   }
@@ -566,14 +648,14 @@ function setMode(c, opts = {}) {
   if (s && !collapsed(s) && !opts.typingOnly) { pushUndo('style', true); styleSel(() => ({ c })); changed(); }
   const was = mode; mode = c;
   const seq = patSeq(); if (seq && seq[patPos] !== c && seq.includes(c)) patPos = seq.indexOf(c);
-  updateModeUI(true);
+  updateModeUI(true); renderLane(false);
   if (was !== c || opts.click) blip(c, false);
 }
-function advance() {
+function advance(quiet) {
   const seq = patSeq(); if (!seq) return;
   const i = posOfColor(mode); patPos = i < 0 ? 0 : (i + 1) % seq.length;
   mode = seq[patPos];
-  updateModeUI(true); blip(mode, true);
+  updateModeUI(true); renderLane(true); if (!quiet) blip(mode, true);
 }
 function charStyleBefore(s) {
   const p = paras()[s.f.p]; if (!p) return null;
@@ -610,7 +692,7 @@ ed.addEventListener('beforeinput', e => {
     const x = collapsed(s) ? textOf(paras()[s.f.p]).slice(0, s.f.o) : '';
     pushUndo('type', e.data === ' ' || !collapsed(s));
     insertText(e.data);
-    if (e.data === ' ' && TERM_END.test(x)) advance();
+    if (e.data === ' ' && TERM_END.test(x)) { sentenceDone(mode); advance(true); }
     changed();
   } else if (t === 'insertParagraph' || t === 'insertLineBreak') {
     e.preventDefault();
@@ -618,7 +700,7 @@ ed.addEventListener('beforeinput', e => {
     const x = collapsed(s) ? textOf(paras()[s.f.p]).slice(0, s.f.o) : '';
     pushUndo('para', true);
     splitPara();
-    if (TERM_END.test(x.trimEnd())) advance();
+    if (TERM_END.test(x.trimEnd())) { sentenceDone(mode); advance(true); }
     changed();
   } else if (t === 'historyUndo') { e.preventDefault(); undo(); }
   else if (t === 'historyRedo') { e.preventDefault(); redo(); }
@@ -633,6 +715,7 @@ ed.addEventListener('beforeinput', e => {
   else pushUndo('other', true);
 });
 ed.addEventListener('input', () => { if (composing) return; clean(); changed(); });
+ed.addEventListener('keydown', () => activity());
 ed.addEventListener('compositionstart', () => { composing = true; pushUndo('other', true); });
 ed.addEventListener('compositionend', () => { composing = false; clean(); changed(); });
 ed.addEventListener('paste', e => {
@@ -664,7 +747,7 @@ function changed() {
   setDirty(true);
   clearTimeout(draftT); draftT = setTimeout(pushDraft, 1200);
   clearTimeout(tallyT); tallyT = setTimeout(tally, 250);
-  placeholder(); schedulePages();
+  placeholder(); schedulePages(); activity(); syncBeatLabels(); renderBeatsSoon();
 }
 function placeholder() { const ps = paras(); $('ph').hidden = !(ps.length === 1 && !textOf(ps[0]).length); }
 function pushDraft() { saveCurrent(); }
@@ -706,6 +789,8 @@ function applySettings() {
   $('tIndent').setAttribute('aria-checked', !!settings.indent);
   $('tDrop').setAttribute('aria-checked', !!settings.dropcap);
   $('tSound').setAttribute('aria-checked', !!settings.sound);
+  $('tFx').setAttribute('aria-checked', settings.fx !== false);
+  $('tRun').setAttribute('aria-checked', settings.runCards !== false);
   for (const b of $('seg').children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
   if (typeof pagesOn !== 'undefined') { applyZoom(); schedulePages(); }
 }
@@ -756,7 +841,7 @@ function parseDocXml(xml) {
   if (d.getElementsByTagName('parsererror').length) throw new Error("Couldn't read this document.");
   const body = d.getElementsByTagNameNS(W, 'body')[0];
   if (!body) return { paras: [[]], indent: false, cmap: {} };
-  const out = [], cmap = {}, active = []; let ind = 0;
+  const out = [], pbeats = [], cmap = {}, active = []; let ind = 0;
   const cid = el => { const n = el.getAttributeNS(W, 'id') || el.getAttribute('w:id'); if (!(n in cmap)) cmap[n] = newCmId(); return cmap[n]; };
   for (const p of body.getElementsByTagNameNS(W, 'p')) {
     let skipP = false;
@@ -765,18 +850,19 @@ function parseDocXml(xml) {
     const runs = [];
     const tw = d.createTreeWalker(p, NodeFilter.SHOW_ELEMENT, { acceptNode: n => (n !== p && n.namespaceURI === W && (n.localName === 'p' || n.localName === 'del' || n.localName === 'r')) ? (n.localName === 'r' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) : NodeFilter.FILTER_SKIP });
     // walk ranges and runs in order (runs are handled whole)
-    const order = [];
+    const order = []; let pbeat = '';
     (function walk(n) {
       for (const ch of n.children) {
         if (ch.namespaceURI !== W) { walk(ch); continue; }
         const ln = ch.localName;
         if (ln === 'p' || ln === 'del') continue;
-        if (ln === 'r' || ln === 'commentRangeStart' || ln === 'commentRangeEnd') order.push(ch);
+        if (ln === 'r' || ln === 'commentRangeStart' || ln === 'commentRangeEnd' || ln === 'bookmarkStart') order.push(ch);
         else walk(ch);
       }
     })(p);
     for (const el of order) {
       const ln = el.localName;
+      if (ln === 'bookmarkStart') { const nm = el.getAttributeNS(W, 'name') || el.getAttribute('w:name') || ''; if (/^beat_[a-z0-9]+$/.test(nm) && !pbeat) pbeat = nm.slice(5); continue; }
       if (ln === 'commentRangeStart') { active.push(cid(el)); continue; }
       if (ln === 'commentRangeEnd') { const id = cid(el), i = active.lastIndexOf(id); if (i >= 0) active.splice(i, 1); continue; }
       const r = el, rPr = child(r, 'rPr'), u = child(rPr, 'u');
@@ -794,9 +880,9 @@ function parseDocXml(xml) {
     }
     const pPr = child(p, 'pPr'), indEl = child(pPr, 'ind');
     if (indEl && +(indEl.getAttributeNS(W, 'firstLine') || indEl.getAttribute('w:firstLine') || 0) > 0) ind++;
-    out.push(runs);
+    out.push(runs); pbeats.push(pbeat);
   }
-  return { paras: out.length ? out : [[]], indent: out.length > 0 && ind / out.length > 0.5, cmap };
+  return { paras: out.length ? out : [[]], indent: out.length > 0 && ind / out.length > 0.5, cmap, pbeats };
 }
 function parseCommentsXml(xml, cmap) {
   const res = {};
@@ -817,11 +903,12 @@ function buildDocXml(withColors) {
   let body = '';
   const ids = withColors ? usedComments() : [], num = {}, closed = new Set();
   ids.forEach((id, i) => num[id] = i);
-  let cur = '';
+  let cur = '', bmk = 0;
   const closeCur = () => { if (!cur) return ''; const n = num[cur]; closed.add(cur); cur = ''; return `<w:commentRangeEnd w:id="${n}"/><w:r><w:commentReference w:id="${n}"/></w:r>`; };
   const ps = paras();
   ps.forEach((p, pi) => {
     let x = '<w:p>' + (settings.indent ? '<w:pPr><w:ind w:firstLine="720"/></w:pPr>' : '');
+    if (p.dataset.beat && beats[p.dataset.beat]) { bmk++; x += `<w:bookmarkStart w:id="${bmk}" w:name="beat_${p.dataset.beat}"/><w:bookmarkEnd w:id="${bmk}"/>`; }
     for (const r of pToRuns(p)) {
       const k = (r.k && num[r.k] !== undefined && !closed.has(r.k)) ? r.k : '';
       if (k !== cur) { x += closeCur(); if (k) { x += `<w:commentRangeStart w:id="${num[k]}"/>`; cur = k; } }
@@ -850,6 +937,19 @@ function buildCommentsXml() {
     return `<w:comment w:id="${i}" w:author="Me" w:initials="Me" w:date="${date}">${ps}</w:comment>`;
   }).join('');
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments xmlns:w="${W}">${items}</w:comments>`;
+}
+function buildCustomXml() {
+  const used = {};
+  for (const p of paras()) if (p.dataset.beat && beats[p.dataset.beat]) used[p.dataset.beat] = beats[p.dataset.beat];
+  if (!Object.keys(used).length) return null;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="2" name="StoplightBeats"><vt:lpwstr>${xmlEsc(JSON.stringify(used))}</vt:lpwstr></property></Properties>`;
+}
+function parseCustomXml(xml) {
+  if (!xml) return {};
+  const m = /name="StoplightBeats"[^>]*>\s*<vt:lpwstr>([\s\S]*?)<\/vt:lpwstr>/.exec(xml);
+  if (!m) return {};
+  const t = m[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+  try { const o = JSON.parse(t); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
 }
 function buildStyles() {
   const f = xmlEsc(settings.font), sz = Math.round(settings.size * 2), ln = Math.round(settings.line * 240);
@@ -1029,27 +1129,28 @@ async function readDocx(buf) {
   const b = new Uint8Array(buf), dv = new DataView(buf); let e = -1;
   for (let i = b.length - 22; i >= Math.max(0, b.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
   if (e < 0) throw new Error("This doesn't look like a .docx file.");
-  const n = dv.getUint16(e + 10, true), dec = new TextDecoder(); let p = dv.getUint32(e + 16, true), doc = null, app = null, cmx = null;
+  const n = dv.getUint16(e + 10, true), dec = new TextDecoder(); let p = dv.getUint32(e + 16, true), doc = null, app = null, cmx = null, cus = null;
   for (let k = 0; k < n; k++) {
     const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
     const name = dec.decode(b.subarray(p + 46, p + 46 + nl)); p += 46 + nl + xl + cl;
-    if (name !== 'word/document.xml' && name !== 'docProps/app.xml' && name !== 'word/comments.xml') continue;
+    if (name !== 'word/document.xml' && name !== 'docProps/app.xml' && name !== 'word/comments.xml' && name !== 'docProps/custom.xml') continue;
     const ds = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true), raw = b.subarray(ds, ds + csize);
     const data = method === 0 ? raw : method === 8 ? await inflateRaw(raw) : null;
     if (!data) continue;
-    if (name === 'word/document.xml') doc = dec.decode(data); else if (name === 'word/comments.xml') cmx = dec.decode(data); else app = dec.decode(data);
+    if (name === 'word/document.xml') doc = dec.decode(data); else if (name === 'word/comments.xml') cmx = dec.decode(data); else if (name === 'docProps/custom.xml') cus = dec.decode(data); else app = dec.decode(data);
   }
   if (!doc) throw new Error('This .docx file has no document inside it.');
-  return { documentXml: doc, commentsXml: cmx, ours: !!app && /<Application>Stoplight<\/Application>/.test(app) };
+  return { documentXml: doc, commentsXml: cmx, customXml: cus, ours: !!app && /<Application>Stoplight<\/Application>/.test(app) };
 }
-function buildDocxBlob(documentXml, stylesXml, commentsXml) {
+function buildDocxBlob(documentXml, stylesXml, commentsXml, customXml) {
   const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
   return zipStore([
-    { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' + (commentsXml ? '<Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>' : '') + '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>' },
-    { name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>' },
+    { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' + (commentsXml ? '<Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>' : '') + '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' + (customXml ? '<Override PartName="/docProps/custom.xml" ContentType="application/vnd.openxmlformats-officedocument.custom-properties+xml"/>' : '') + '</Types>' },
+    { name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' + (customXml ? '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties" Target="docProps/custom.xml"/>' : '') + '</Relationships>' },
     { name: 'word/_rels/document.xml.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' + (commentsXml ? '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>' : '') + '</Relationships>' },
     { name: 'word/document.xml', data: documentXml },
     ...(commentsXml ? [{ name: 'word/comments.xml', data: commentsXml }] : []),
+    ...(customXml ? [{ name: 'docProps/custom.xml', data: customXml }] : []),
     { name: 'word/styles.xml', data: stylesXml },
     { name: 'docProps/app.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Stoplight</Application></Properties>' },
     { name: 'docProps/core.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified></cp:coreProperties>` }
@@ -1067,7 +1168,7 @@ function saveCurrent(quiet) {
   const list = idx(), d = list.find(x => x.id === currentId);
   if (!d) return;
   if (!LS.set('sl.doc.' + currentId, cleanHTML())) return;
-  LS.set('sl.cm.' + currentId, comments);
+  LS.set('sl.cm.' + currentId, comments); LS.set('sl.bt.' + currentId, beats);
   d.updated = Date.now();
   if (!d.named) d.title = firstWords();
   list.sort((a, b) => b.updated - a.updated);
@@ -1086,8 +1187,9 @@ function openDoc(id, focus) {
   if (currentId && dirty) saveCurrent(true);
   currentId = id; LS.set('sl.current', id);
   comments = LS.get('sl.cm.' + id, {}) || {}; activeCm = null;
+  beats = LS.get('sl.bt.' + id, {}) || {}; beatSel = null;
   ed.innerHTML = LS.get('sl.doc.' + id, '<p><br></p>') || '<p><br></p>';
-  removeBreaks(); clean(); renderComments();
+  removeBreaks(); clean(); renderComments(); syncBeatLabels(); renderBeatsSoon();
   undoStack = []; redoStack = []; lastKind = null; dirty = false;
   titleUI(); tally(); placeholder();
   $('desk').scrollTop = 0;
@@ -1096,14 +1198,14 @@ function openDoc(id, focus) {
 function newDoc() {
   if (currentId && dirty) saveCurrent(true);
   const id = createDoc('');
-  mode = 'r'; fmt = { b: false, i: false, u: false }; updateModeUI(false); updateFmtUI();
+  mode = 'r'; fmt = { b: false, i: false, u: false }; updateModeUI(false); renderLane(false); showCombo(false); updateFmtUI();
   openDoc(id, true); closeDocs();
 }
 async function deleteDoc(id) {
   const d = entry(id);
   const a = await ask(`Delete “${docTitle(d)}”? This can't be undone.`, [['cancel', 'Cancel'], ['del', 'Delete', true, 'danger']]);
   if (a !== 'del') return;
-  LS.del('sl.doc.' + id); LS.del('sl.cm.' + id);
+  LS.del('sl.doc.' + id); LS.del('sl.cm.' + id); LS.del('sl.bt.' + id);
   const list = idx().filter(x => x.id !== id);
   LS.set('sl.index', list);
   if (id === currentId) { currentId = null; if (list.length) openDoc(list[0].id); else openDoc(createDoc('')); }
@@ -1137,17 +1239,18 @@ async function importFile(f) {
   try {
     const r = await readDocx(await f.arrayBuffer()), d = parseDocXml(r.documentXml);
     const tmp = document.createElement('div');
-    for (const runs of d.paras) { const p = document.createElement('p'); render(p, runs); tmp.appendChild(p); }
+    const bts = parseCustomXml(r.customXml);
+    d.paras.forEach((runs, i) => { const p = document.createElement('p'); render(p, runs); if (d.pbeats[i] && bts[d.pbeats[i]]) p.dataset.beat = d.pbeats[i]; tmp.appendChild(p); });
     if (dirty) saveCurrent(true);
     const id = createDoc(tmp.innerHTML || '<p><br></p>', f.name.replace(/\.docx$/i, ''));
-    LS.set('sl.cm.' + id, parseCommentsXml(r.commentsXml, d.cmap));
+    LS.set('sl.cm.' + id, parseCommentsXml(r.commentsXml, d.cmap)); LS.set('sl.bt.' + id, bts);
     openDoc(id); closeDocs(); toast('Imported ' + f.name.replace(/\.docx$/i, ''));
   } catch (e) { toast(e.message || "Couldn't read that file", true); }
 }
 async function exportDocx(withColors) {
   saveCurrent(true);
   const name = (docTitle(entry(currentId)) || 'Untitled').replace(/[\\/:*?"<>|]/g, '').slice(0, 80) + (withColors ? '' : ' (clean)') + '.docx';
-  const blob = buildDocxBlob(buildDocXml(withColors), buildStyles(), withColors ? buildCommentsXml() : null);
+  const blob = buildDocxBlob(buildDocXml(withColors), buildStyles(), withColors ? buildCommentsXml() : null, withColors ? buildCustomXml() : null);
   const f = new File([blob], name, { type: blob.type });
   if (navigator.canShare && navigator.canShare({ files: [f] })) {
     try { await navigator.share({ files: [f] }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
@@ -1363,6 +1466,224 @@ $('seg').addEventListener('contextmenu', e => {
 });
 $('patNew').onclick = () => editPattern(null);
 
+/* ---------- flow layer ---------- */
+const DARES = ['Put a smell in it', 'Start with a sound', 'Under seven words', 'Someone lies', 'Use a color that isn’t red, yellow or green', 'Someone wants something small', 'End on a question', 'Something unexpected walks in', 'Describe a hand', 'Use a word you never use', 'Make it funnier than it should be', 'Break a rule you just made', 'Say it like a weather report', 'One long sentence, no brakes', 'Give an object an opinion', 'Contradict the last sentence', 'Zoom way in on a tiny detail', 'Zoom way out', 'Make it worse, on purpose', 'Somebody remembers something', 'A simile that surprises you', 'Let the setting move', 'Whisper it', 'Give someone a nervous habit', 'A sound nobody can explain', 'Write it like a prayer', 'Steal the rhythm of a song you like', 'Something breaks', 'Something gets fixed', 'A secret almost slips', 'Use a name for the first time', 'Put the weather in someone’s mood', 'Interrupt someone', 'Make an animal do something', 'Use exactly three commas', 'Make it sound expensive', 'Make it sound cheap', 'Something tender, quickly', 'A strange word for an ordinary thing', 'Someone is hungry'];
+let combo = 0, comboAt = 0, lastAct = Date.now(), run = null, runShown = false, dare = null;
+const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26];
+const COLHEX = { r: '#e5534b', y: '#f2c230', g: '#4cbb5e', n: '#d8cfc0' };
+function wordCount() { const t = paras().map(textOf).join('\n'); return (t.match(/[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu) || []).length; }
+function startRun() { run = { start: Date.now(), cols: [], words0: wordCount(), best: 0 }; runShown = false; $('runcard').hidden = true; }
+function activity() { const now = Date.now(); if (!run || (runShown && now - lastAct > 90000)) startRun(); lastAct = now; }
+function sentenceDone(c) {
+  const now = Date.now();
+  activity();
+  if (now - comboAt > 45000) combo = 0;
+  combo++; comboAt = now;
+  run.cols.push(c); run.best = Math.max(run.best, combo);
+  if (combo > (settings.bestCombo || 0)) { settings.bestCombo = combo; saveSettings(); }
+  if (settings.fx !== false) { showCombo(true); burst(c); }
+  chime(combo);
+  if (dare) dareDone();
+}
+function showCombo(pop) {
+  const el = $('combo'), on = settings.fx !== false;
+  el.textContent = on && combo > 1 ? '×' + combo : '';
+  el.dataset.lv = Math.min(5, Math.floor(combo / 3));
+  if (pop && on) { el.classList.remove('cpop'); void el.offsetWidth; el.classList.add('cpop'); }
+  document.documentElement.style.setProperty('--flow', on ? Math.min(1, combo / 12) : 0);
+  document.body.classList.toggle('flowfx', on);
+}
+function caretXY() {
+  const s = getSelection(); if (!s.rangeCount) return null;
+  const r = s.getRangeAt(0).getBoundingClientRect();
+  if (r.height) return { x: r.right, y: r.top + r.height / 2 };
+  const n = s.focusNode, el = n && (n.nodeType === 1 ? n : n.parentElement); if (!el) return null;
+  const b = el.getBoundingClientRect(); return { x: b.left, y: b.top + 10 };
+}
+function burst(c) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const p = caretXY(); if (!p) return;
+  const fx = $('fx'), col = COLHEX[c] || COLHEX.n, n = 8 + Math.min(10, combo);
+  const ring = document.createElement('i'); ring.className = 'ring'; ring.style.cssText = `left:${p.x}px;top:${p.y}px;--c:${col}`; fx.appendChild(ring);
+  setTimeout(() => ring.remove(), 600);
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, d = 20 + Math.random() * (30 + combo * 3);
+    const sp = document.createElement('i'); sp.className = 'spark';
+    sp.style.cssText = `left:${p.x - 3}px;top:${p.y - 3}px;--c:${col};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 10}px`;
+    fx.appendChild(sp); setTimeout(() => sp.remove(), 750);
+  }
+}
+function chime(n) {
+  if (!settings.sound) return;
+  try {
+    actx = actx || new AudioContext();
+    const t = actx.currentTime, f = 392 * Math.pow(2, SCALE[(n - 1) % SCALE.length] / 12);
+    for (const [mult, gain] of [[1, 0.05], [2, 0.012]]) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(f * mult, t);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t + 0.52);
+    }
+  } catch (e) {}
+}
+function renderLane(slide) {
+  const el = $('lane'); if (!el) return;
+  const seq = patSeq(); el.textContent = '';
+  if (!seq) return;
+  let c = mode;
+  const list = [c];
+  let i = posOfColor(c);
+  for (let k = 0; k < 4; k++) { i = i < 0 ? 0 : (i + 1) % seq.length; list.push(seq[i]); }
+  for (const x of list) { const d = document.createElement('i'); d.style.background = COLHEX[x]; if (x === 'n') d.className = 'pn'; el.appendChild(d); }
+  if (slide) { el.classList.remove('slide'); void el.offsetWidth; el.classList.add('slide'); }
+}
+function showRun() {
+  if (!run) { toast('Start writing to begin a run'); return; }
+  const mins = Math.max(1, Math.round((Date.now() - run.start) / 60000)), added = wordCount() - run.words0;
+  const c = $('runcard');
+  const trail = run.cols.slice(-60).map(x => `<i style="background:${COLHEX[x]}${x === 'n' ? ';box-shadow:inset 0 0 0 1.5px #aaa;background:none' : ''}"></i>`).join('');
+  c.innerHTML = `<h5>${run.cols.length ? 'What a run' : 'Run in progress'}</h5><div class="sub">${mins} min${mins === 1 ? '' : 's'} of writing · best combo ever ×${settings.bestCombo || 0}</div>
+    <div class="trail">${trail || '<span style="font-size:12px;color:var(--faint)">Finish a sentence to light up the trail</span>'}</div>
+    <div class="stats"><div><b>${run.cols.length}</b><small>sentences</small></div><div><b>${added >= 0 ? '+' : ''}${added}</b><small>words</small></div><div><b>×${run.best}</b><small>best combo</small></div></div>
+    <button id="runOk">Keep going</button>`;
+  c.hidden = false;
+  $('runOk').onclick = () => { c.hidden = true; ed.focus(); };
+}
+function rollDare() {
+  let d; do d = DARES[Math.floor(Math.random() * DARES.length)]; while (d === dare && DARES.length > 1);
+  dare = d;
+  const el = $('dare');
+  el.className = 'darechip'; el.hidden = false;
+  el.innerHTML = `<b>Dare</b><span></span><button id="dareRe" title="Roll again">↻</button><button id="dareX" title="Skip">✕</button>`;
+  el.querySelector('span').textContent = d;
+  for (const b of el.querySelectorAll('button')) b.addEventListener('mousedown', e => e.preventDefault());
+  $('dareRe').onclick = () => { rollDare(); blip('n', true); };
+  $('dareX').onclick = () => { dare = null; el.hidden = true; };
+  blip('y', false);
+}
+function dareDone() {
+  const el = $('dare'); dare = null;
+  el.classList.add('done'); setTimeout(() => { el.hidden = true; el.classList.remove('done'); }, 620);
+  toast('Dare done ✦');
+}
+setInterval(() => {
+  const now = Date.now(), idle = now - lastAct;
+  if (combo && now - comboAt > 45000) { combo = 0; showCombo(false); }
+  if (run && !runShown && idle > 90000 && run.cols.length >= 3 && settings.runCards !== false) { runShown = true; showRun(); }
+}, 1000);
+
+/* ---------- beats & story curve ---------- */
+let beats = {}, beatSel = null, beatsOn = false;
+function beatParas() { return paras().filter(p => p.dataset.beat && beats[p.dataset.beat]); }
+function syncBeatLabels() {
+  for (const p of paras()) {
+    const id = p.dataset.beat;
+    if (!id) continue;
+    if (!beats[id]) { delete p.dataset.beat; delete p.dataset.blabel; continue; }
+    const t = (beats[id].t || '').trim();
+    if (t) { if (p.dataset.blabel !== t) p.dataset.blabel = t; } else if (p.dataset.blabel !== undefined) delete p.dataset.blabel;
+  }
+}
+function beatPoints() {
+  const ps = paras(), lens = ps.map(p => textOf(p).length + 1), total = lens.reduce((a, b) => a + b, 0) || 1;
+  const pts = []; let acc = 0;
+  ps.forEach((p, i) => { const id = p.dataset.beat; if (id && beats[id]) pts.push({ id, x: ps.length > 1 ? acc / total : 0.5, y: beats[id].y, p }); acc += lens[i]; });
+  return { pts, total };
+}
+function caretFrac() {
+  const s = getSel(); if (!s) return null;
+  const ps = paras(); let acc = 0, total = 0;
+  ps.forEach((p, i) => { const l = textOf(p).length + 1; if (i < s.f.p) acc += l; total += l; });
+  return total ? (acc + s.f.o) / total : 0;
+}
+function renderBeats() {
+  if (!beatsOn) return;
+  const bar = $('beatbar'), W0 = bar.clientWidth || 600, H0 = (innerWidth < 700 ? 104 : 118);
+  const { pts } = beatPoints();
+  const pad = 26, X = f => pad + f * (W0 - pad * 2), Y = v => 22 + (1 - v) * (H0 - 40);
+  const sel = beats[beatSel] ? beatSel : null;
+  let svg = `<svg viewBox="0 0 ${W0} ${H0}" id="bsvg">`;
+  for (let k = 1; k < 4; k++) svg += `<line x1="${pad}" x2="${W0 - pad}" y1="${22 + k * (H0 - 40) / 4}" y2="${22 + k * (H0 - 40) / 4}" stroke="rgba(255,255,255,.05)"/>`;
+  if (pts.length) {
+    const P = [{ x: 0, y: pts[0].y }, ...pts, { x: 1, y: pts[pts.length - 1].y }].map(q => [X(q.x), Y(q.y)]);
+    let d = `M${P[0][0]},${P[0][1]}`;
+    for (let i = 0; i < P.length - 1; i++) {
+      const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6], c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p2[0]},${p2[1]}`;
+    }
+    svg += `<path d="${d} L${W0 - pad},${H0} L${pad},${H0} Z" fill="rgba(124,92,214,.13)"/><path d="${d}" fill="none" stroke="#9b80f0" stroke-width="2.5" stroke-linecap="round"/>`;
+  }
+  const cf = caretFrac();
+  if (cf != null) svg += `<line x1="${X(cf)}" x2="${X(cf)}" y1="10" y2="${H0 - 6}" stroke="${COLHEX[mode]}" stroke-width="2" stroke-dasharray="3 4" opacity=".8"/><circle cx="${X(cf)}" cy="10" r="3.5" fill="${COLHEX[mode]}"/>`;
+  pts.forEach((q, i) => {
+    const t = (beats[q.id].t || '').trim() || 'Beat ' + (i + 1), lab = t.length > 18 ? t.slice(0, 17) + '…' : t;
+    const cx = X(q.x), cy = Y(q.y), ty = q.y > 0.6 ? cy + 20 : cy - 12;
+    svg += `<g class="bpt${q.id === sel ? ' sel' : ''}" data-id="${q.id}"><circle class="hit" cx="${cx}" cy="${cy}" r="16"/><circle class="bdot" cx="${cx}" cy="${cy}" r="${q.id === sel ? 8 : 6.5}"/><text x="${q.x < 0.1 ? cx - 6 : q.x > 0.9 ? cx + 6 : cx}" y="${ty}" text-anchor="${q.x < 0.1 ? 'start' : q.x > 0.9 ? 'end' : 'middle'}">${escH(lab)}</text></g>`;
+  });
+  svg += '</svg>';
+  const t = sel ? escH(beats[sel].t || '') : '';
+  bar.innerHTML = svg + (pts.length ? '' : '<div class="empty">Put your cursor in a paragraph and add a beat. Drag beats up and down to shape the story.</div>') +
+    (sel ? `<div class="bbedit"><input id="bTitle" maxlength="60" placeholder="Name this beat" value="${t}"><button id="bDel">Remove</button></div>` : '') +
+    `<div class="bbtools"><button class="addb" id="bAdd">+ Beat here</button><button id="bClose">✕</button></div>`;
+  for (const b of bar.querySelectorAll('button')) b.addEventListener('mousedown', e => e.preventDefault());
+  $('bAdd').onclick = () => addBeat();
+  $('bClose').onclick = () => toggleBeats(false);
+  if (sel) {
+    const inp = $('bTitle');
+    inp.addEventListener('input', () => { beats[sel].t = inp.value; syncBeatLabels(); changed(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); inp.blur(); ed.focus(); } e.stopPropagation(); });
+    inp.addEventListener('blur', () => renderBeatsSoon());
+    $('bDel').onclick = () => { const p = paras().find(x => x.dataset.beat === sel); pushUndo('style', true); if (p) { delete p.dataset.beat; delete p.dataset.blabel; } delete beats[sel]; beatSel = null; changed(); renderBeats(); };
+  }
+  // dragging points
+  const svgEl = $('bsvg');
+  for (const g of svgEl.querySelectorAll('.bpt')) {
+    g.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      const id = g.dataset.id, rect = svgEl.getBoundingClientRect(), sy = e.clientY, y0 = beats[id].y; let moved = false;
+      g.setPointerCapture(e.pointerId);
+      const mv = ev => {
+        if (Math.abs(ev.clientY - sy) > 3) moved = true;
+        if (!moved) return;
+        const v = 1 - ((ev.clientY - rect.top) * (H0 / rect.height) - 22) / (H0 - 40);
+        beats[id].y = Math.max(0, Math.min(1, v));
+        const dot = g.querySelector('.bdot'), hit = g.querySelector('.hit'), tx = g.querySelector('text');
+        const cy = Y(beats[id].y); dot.setAttribute('cy', cy); hit.setAttribute('cy', cy); tx.setAttribute('y', beats[id].y > 0.6 ? cy + 20 : cy - 12);
+      };
+      const up = () => {
+        g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up);
+        if (moved) { changed(); renderBeats(); }
+        else { beatSel = id; const p = paras().find(x => x.dataset.beat === id); if (p) { ed.focus(); const pi = paras().indexOf(p); setSel(at(pi, 0)); p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } renderBeats(); }
+        if (!moved && y0 === beats[id].y) blip('n', true);
+      };
+      g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+    });
+  }
+}
+let beatsQ = 0;
+function renderBeatsSoon() { if (beatsOn && !beatsQ) beatsQ = requestAnimationFrame(() => { beatsQ = 0; if (document.activeElement && document.activeElement.id === 'bTitle') return; renderBeats(); }); }
+function addBeat() {
+  let s = getSel();
+  if (!s) { const ps = paras(); s = at(ps.length - 1, 0); }
+  const p = paras()[s.f.p];
+  if (p.dataset.beat && beats[p.dataset.beat]) { beatSel = p.dataset.beat; renderBeats(); setTimeout(() => $('bTitle') && $('bTitle').focus(), 30); return; }
+  const id = 'b' + Math.random().toString(36).slice(2, 8);
+  pushUndo('style', true);
+  beats[id] = { t: '', y: 0.5 };
+  p.dataset.beat = id;
+  beatSel = id; changed(); renderBeats(); blip('g', true);
+  setTimeout(() => $('bTitle') && $('bTitle').focus(), 30);
+}
+function toggleBeats(on) {
+  beatsOn = on === undefined ? !beatsOn : !!on;
+  $('beatbar').hidden = !beatsOn; $('bBeats').setAttribute('aria-pressed', beatsOn);
+  if (beatsOn) renderBeats();
+  if (pagesOn) { applyZoom(); schedulePages(); }
+}
+document.addEventListener('selectionchange', () => { if (beatsOn && document.activeElement === ed) renderBeatsSoon(); });
+addEventListener('resize', () => renderBeatsSoon());
+
 /* ---------- wiring ---------- */
 function openComments(focusId) { closePop(); closeDocs(); $('cmPanel').hidden = false; $('veilCm').hidden = false; renderComments(focusId); }
 function closeComments() { $('cmPanel').hidden = true; $('veilCm').hidden = true; }
@@ -1420,6 +1741,13 @@ for (const [id, c] of [['dR', 'r'], ['dY', 'y'], ['dG', 'g']]) {
 $('dReset').onclick = () => { settings.desc = {}; saveSettings(); for (const id of ['dR', 'dY', 'dG']) { $(id).value = ''; grow($(id)); } updateModeUI(false); };
 function grow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
 function fillDesc() { const d = settings.desc || {}; $('dR').value = d.r || ''; $('dY').value = d.y || ''; $('dG').value = d.g || ''; for (const id of ['dR', 'dY', 'dG']) requestAnimationFrame(() => grow($(id))); }
+$('combo').addEventListener('mousedown', e => e.preventDefault());
+$('combo').onclick = () => showRun();
+$('bDare').addEventListener('mousedown', e => e.preventDefault());
+$('bDare').onclick = () => { if (dare && !$('dare').hidden) { dare = null; $('dare').hidden = true; } else rollDare(); };
+$('bBeats').addEventListener('mousedown', e => e.preventDefault());
+$('bBeats').onclick = () => toggleBeats();
+for (const [id, k] of [['tFx', 'fx'], ['tRun', 'runCards']]) $(id).onclick = () => { settings[k] = settings[k] === false; saveSettings(); applySettings(); showCombo(false); };
 for (const [id, k] of [['tIndent', 'indent'], ['tDrop', 'dropcap'], ['tSound', 'sound']]) $(id).onclick = () => { settings[k] = !settings[k]; saveSettings(); applySettings(); if (k === 'sound') blip('g', false); };
 
 /* pinch to zoom */
@@ -1491,7 +1819,7 @@ addEventListener('pagehide', () => { if (dirty) saveCurrent(true); });
   const list = idx(); let cur = LS.get('sl.current', null);
   if (!list.find(d => d.id === cur)) cur = list.length ? list[0].id : createDoc('');
   openDoc(cur, false);
-  updateModeUI(false); updateFmtUI(); fitViewport();
+  updateModeUI(false); renderLane(false); showCombo(false); updateFmtUI(); fitViewport();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
 </script>
