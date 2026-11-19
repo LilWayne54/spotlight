@@ -109,8 +109,8 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .sheetpanel .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;min-height:34px}
 .sheetpanel select{flex:1;padding:9px 10px;border-radius:10px;border:0;outline:none;background:rgba(255,255,255,.08);color:var(--cream);-webkit-appearance:none;appearance:none}
 .sheetpanel select option{background:#2d2823}
-.seg{display:flex;width:100%;padding:3px;border-radius:12px;background:rgba(0,0,0,.28);box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
-.seg button{flex:1;padding:9px 6px;border-radius:9px;font-size:13px;font-weight:600;color:var(--dim);display:flex;align-items:center;justify-content:center;gap:6px;transition:background .18s,color .18s,scale .25s var(--spring)}
+.seg{display:flex;flex-wrap:wrap;width:100%;padding:3px;border-radius:12px;background:rgba(0,0,0,.28);box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
+.seg button{flex:1 0 auto;padding:9px 6px;border-radius:9px;font-size:13px;font-weight:600;color:var(--dim);display:flex;align-items:center;justify-content:center;gap:6px;transition:background .18s,color .18s,scale .25s var(--spring)}
 .seg button:active{scale:.94}
 .seg button[aria-pressed="true"]{background:var(--cream);color:#2a241e}
 .seg .pips{display:flex;gap:2px}
@@ -144,6 +144,27 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .cmempty{padding:14px 4px;color:var(--faint);font-size:12.5px;line-height:1.5}
 .cmadd{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;margin-bottom:10px;border-radius:11px;background:#7c5cd6;color:#fff;font-weight:600;transition:scale .2s var(--spring)}
 .cmadd:active{scale:.96}
+.seg .pips i.pn{background:transparent !important;box-shadow:inset 0 0 0 1.3px currentColor}
+.seg button{white-space:nowrap}
+.seg .plus{padding:6px 9px;color:var(--faint);font-size:15px;line-height:1}
+.patrow{display:flex;align-items:center;gap:10px;margin:0 0 6px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.05)}
+.patrow .pips{display:flex;gap:3px;flex:none}
+.patrow .pips i{width:8px;height:8px;border-radius:50%}
+.patrow span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seqview{display:flex;flex-wrap:wrap;align-items:center;gap:7px;min-height:44px;padding:10px;margin:0 0 10px;border-radius:12px;background:rgba(0,0,0,.28)}
+.seqview .sqd{display:block;flex:none;width:24px;height:24px;border-radius:50%;transition:scale .2s var(--spring)}
+.seqview .sqd:active{scale:.85}
+.seqview .arrow{color:var(--faint);font-size:11px}
+.seqview .empty{color:var(--faint);font-size:12.5px}
+.adders{display:flex;align-items:center;gap:10px;margin:0 0 6px}
+.adders button.add{width:38px;height:38px;border-radius:50%;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);transition:scale .2s var(--spring)}
+.adders button.add:active{scale:.85}
+.adders .back{margin-left:auto;padding:7px 10px;border-radius:9px;font-size:12.5px;color:var(--dim);background:rgba(255,255,255,.07)}
+.pn-dot{background:transparent !important;box-shadow:inset 0 0 0 2px rgba(255,255,255,.45) !important}
+.modal .lbl2{display:block;margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.modal input.pname{display:block;width:100%;margin:0 0 14px;padding:9px 11px;border:0;outline:none;border-radius:10px;background:rgba(255,255,255,.09);color:var(--cream);font-size:15px;user-select:text;-webkit-user-select:text}
+.modal .tiny{margin:-2px 0 14px;font-size:12px;color:var(--faint)}
+.modal .btns .del{margin-right:auto;background:transparent;color:#ff9a8a}
 .toggle{width:46px;height:28px;border-radius:99px;background:rgba(255,255,255,.14);position:relative;transition:background .2s}
 .toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:translate .25s var(--spring)}
 .toggle[aria-checked="true"]{background:var(--G)}
@@ -235,6 +256,9 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
   <div class="row"><span>Indent paragraphs</span><button class="toggle" id="tIndent" role="switch"></button></div>
   <div class="row"><span>Drop cap</span><button class="toggle" id="tDrop" role="switch"></button></div>
   <div class="row"><span>Clicky sounds</span><button class="toggle" id="tSound" role="switch"></button></div>
+  <h4 style="margin-top:4px">Custom patterns</h4>
+  <div id="patList"></div>
+  <div class="row" style="justify-content:flex-start;margin-top:2px"><button class="linkbtn" id="patNew">+ New pattern</button></div>
   <h4 style="margin-top:4px">Color meanings</h4>
   <div class="meaning"><i style="background:var(--R)"></i><textarea id="dR" rows="1" maxlength="80" placeholder="not trying · no bashing"></textarea></div>
   <div class="meaning"><i style="background:var(--Y)"></i><textarea id="dY" rows="1" maxlength="80" placeholder="trying · no bashing"></textarea></div>
@@ -266,7 +290,16 @@ const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const ed = $('ed');
 const NAMES = { r: 'Red', y: 'Yellow', g: 'Green', n: 'No color' };
 const DESC = { r: 'not trying · no bashing', y: 'trying · no bashing', g: 'trying · bashing', n: 'plain text' };
-const NEXT = { climb: { r: 'y', y: 'g', g: 'r', n: 'r' }, leap: { r: 'g', g: 'y', y: 'r', n: 'r' } };
+const BUILTIN = { climb: ['r', 'y', 'g'], leap: ['r', 'g', 'y'] };
+let patPos = 0;
+function patSeq(id) {
+  id = id || settings.pattern;
+  if (BUILTIN[id]) return BUILTIN[id];
+  const c = (settings.customPatterns || []).find(p => p.id === id);
+  return c && c.seq.length > 1 ? c.seq : null;
+}
+function posOfColor(c) { const seq = patSeq(); if (!seq) return -1; return seq[patPos] === c ? patPos : seq.indexOf(c); }
+function nextOf(c) { const seq = patSeq(); if (!seq) return c; const i = posOfColor(c); return seq[i < 0 ? 0 : (i + 1) % seq.length]; }
 const FILL = { r: 'F0A9A3', y: 'F9E19A', g: 'B9E0A3' };
 const FONTS = ['Georgia', 'Iowan Old Style', 'Palatino', 'Baskerville', 'Charter', 'Times New Roman', 'Garamond', 'Avenir Next', 'Helvetica Neue', 'Courier New'];
 const descOf = c => (settings.desc && settings.desc[c] && settings.desc[c].trim()) || DESC[c];
@@ -523,8 +556,8 @@ function updateModeUI(pulse) {
   }
   $('mName').textContent = NAMES[mode]; $('mDesc').textContent = descOf(mode);
   for (const b of document.querySelectorAll('.lamp')) b.title = NAMES[b.dataset.c] + ': ' + descOf(b.dataset.c);
-  const pat = settings.pattern;
-  $('next').innerHTML = pat === 'free' ? '' : `Next sentence: <b style="color:${{ r: '#ff8a82', y: '#ffd65c', g: '#7fd88b', n: '#ccc' }[NEXT[pat][mode]]}">${NAMES[NEXT[pat][mode]]}</b>`;
+  const nx = nextOf(mode);
+  $('next').innerHTML = !patSeq() ? '' : `Next sentence: <b style="color:${{ r: '#ff8a82', y: '#ffd65c', g: '#7fd88b', n: '#ccc' }[nx]}">${NAMES[nx]}</b>`;
   if (settings.mode !== mode) { settings.mode = mode; saveSettings(); }
 }
 function updateFmtUI() { $('bB').setAttribute('aria-pressed', fmt.b); $('bI').setAttribute('aria-pressed', fmt.i); $('bU').setAttribute('aria-pressed', fmt.u); }
@@ -532,12 +565,14 @@ function setMode(c, opts = {}) {
   const s = getSel();
   if (s && !collapsed(s) && !opts.typingOnly) { pushUndo('style', true); styleSel(() => ({ c })); changed(); }
   const was = mode; mode = c;
+  const seq = patSeq(); if (seq && seq[patPos] !== c && seq.includes(c)) patPos = seq.indexOf(c);
   updateModeUI(true);
   if (was !== c || opts.click) blip(c, false);
 }
 function advance() {
-  if (settings.pattern === 'free') return;
-  mode = NEXT[settings.pattern][mode];
+  const seq = patSeq(); if (!seq) return;
+  const i = posOfColor(mode); patPos = i < 0 ? 0 : (i + 1) % seq.length;
+  mode = seq[patPos];
   updateModeUI(true); blip(mode, true);
 }
 function charStyleBefore(s) {
@@ -551,8 +586,8 @@ function deriveFromCaret(force) {
   const x = charStyleBefore(s); if (!x) { updateFmtUI(); return; }
   fmt = { b: x.r.b, i: x.r.i, u: x.r.u };
   let c = x.r.c;
-  if (settings.pattern !== 'free' && TERM_SPACE.test(x.before)) c = NEXT[settings.pattern][c];
-  if (c !== mode) { mode = c; updateModeUI(false); }
+  if (patSeq() && TERM_SPACE.test(x.before)) c = nextOf(c);
+  if (c !== mode) { mode = c; const sq = patSeq(); if (sq && sq[patPos] !== c && sq.includes(c)) patPos = sq.indexOf(c); updateModeUI(false); }
   updateFmtUI();
 }
 function toggleFmt(k) {
@@ -1238,6 +1273,96 @@ document.addEventListener('selectionchange', () => {
   setActiveCm(cmAtCaret());
 });
 
+/* ---------- custom patterns ---------- */
+const PIPC = { r: 'var(--R)', y: 'var(--Y)', g: 'var(--G)', n: 'transparent' };
+function pipsHTML(seq, max) {
+  const show = seq.slice(0, max || 6);
+  return '<span class="pips">' + show.map(c => `<i class="${c === 'n' ? 'pn' : ''}" style="background:${PIPC[c]}"></i>`).join('') + (seq.length > show.length ? '<i style="background:none;width:auto;color:inherit;font-size:9px;line-height:6px">…</i>' : '') + '</span>';
+}
+function escH(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function renderSeg() {
+  const seg = $('seg'); seg.textContent = '';
+  const add = (id, html, title) => { const b = document.createElement('button'); b.dataset.p = id; b.innerHTML = html; if (title) b.title = title; seg.appendChild(b); return b; };
+  add('free', '<span class="lbl">Free</span>', 'You pick every color');
+  add('climb', pipsHTML(BUILTIN.climb) + '<span class="lbl">Climb</span>', 'Each new sentence moves red → yellow → green');
+  add('leap', pipsHTML(BUILTIN.leap) + '<span class="lbl">Leap</span>', 'Each new sentence moves red → green → yellow');
+  for (const p of settings.customPatterns || []) add(p.id, pipsHTML(p.seq) + `<span class="lbl">${escH(p.name)}</span>`, p.name + ' (right-click to edit)');
+  const plus = add('+', '+', 'Make your own pattern'); plus.className = 'plus';
+  for (const b of seg.children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
+}
+function renderPatList() {
+  const box = $('patList'); box.textContent = '';
+  for (const p of settings.customPatterns || []) {
+    const row = document.createElement('div'); row.className = 'patrow';
+    row.innerHTML = pipsHTML(p.seq, 12) + `<span>${escH(p.name)}</span>`;
+    const e = document.createElement('button'); e.className = 'linkbtn'; e.textContent = 'Edit'; e.onclick = () => editPattern(p.id);
+    row.appendChild(e); box.appendChild(row);
+  }
+}
+function choosePattern(id) {
+  settings.pattern = id; patPos = 0;
+  const seq = patSeq(); if (seq && seq.includes(mode)) patPos = seq.indexOf(mode);
+  saveSettings(); applySettings(); renderSeg(); updateModeUI(false); blip('n', true);
+}
+function editPattern(id) {
+  const list = settings.customPatterns || (settings.customPatterns = []);
+  const ex = list.find(p => p.id === id);
+  let seq = ex ? [...ex.seq] : [];
+  const v = document.createElement('div'); v.className = 'mveil';
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = `<p style="margin-bottom:12px;font-weight:600">${ex ? 'Edit pattern' : 'New pattern'}</p>
+    <label class="lbl2">Name</label><input class="pname" maxlength="24" placeholder="My pattern">
+    <label class="lbl2">Colors, in order</label><div class="seqview"></div>
+    <div class="adders"><button class="add" data-a="r" style="background:var(--R)" title="Add red"></button><button class="add" data-a="y" style="background:var(--Y)" title="Add yellow"></button><button class="add" data-a="g" style="background:var(--G)" title="Add green"></button><button class="add pn-dot" data-a="n" title="Add no color"></button><button class="back">⌫ Undo</button></div>
+    <p class="tiny">Tap the colors to build the cycle. Tap a dot above to remove it. Each new sentence moves one step.</p>
+    <div class="btns">${ex ? '<button class="del">Delete</button>' : ''}<button class="cancel">Cancel</button><button class="main ok">Save</button></div>`;
+  v.appendChild(m); document.body.appendChild(v);
+  const name = m.querySelector('.pname'), view = m.querySelector('.seqview');
+  name.value = ex ? ex.name : '';
+  const draw = () => {
+    view.textContent = '';
+    if (!seq.length) { view.innerHTML = '<span class="empty">No colors yet</span>'; return; }
+    seq.forEach((c, i) => {
+      if (i) { const a = document.createElement('span'); a.className = 'arrow'; a.textContent = '→'; view.appendChild(a); }
+      const d = document.createElement('button'); d.className = 'sqd' + (c === 'n' ? ' pn-dot' : ''); d.style.background = PIPC[c]; d.title = 'Remove';
+      d.onclick = () => { seq.splice(i, 1); draw(); };
+      view.appendChild(d);
+    });
+    const a = document.createElement('span'); a.className = 'arrow'; a.textContent = '↺'; view.appendChild(a);
+  };
+  draw();
+  for (const b of m.querySelectorAll('.add')) b.onclick = () => { if (seq.length >= 12) { toast('Twelve steps max'); return; } seq.push(b.dataset.a); draw(); blip(b.dataset.a, true); };
+  m.querySelector('.back').onclick = () => { seq.pop(); draw(); };
+  const close = () => { v.remove(); document.removeEventListener('keydown', key, true); };
+  const key = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+  document.addEventListener('keydown', key, true);
+  v.addEventListener('mousedown', e => { if (e.target === v) close(); });
+  m.querySelector('.cancel').onclick = close;
+  m.querySelector('.ok').onclick = () => {
+    if (seq.length < 2) { toast('Add at least two colors', true); return; }
+    const nm = name.value.trim() || 'Pattern ' + (list.length + (ex ? 0 : 1));
+    let pid = id;
+    if (ex) { ex.name = nm; ex.seq = seq; } else { pid = 'p' + Math.random().toString(36).slice(2, 8); list.push({ id: pid, name: nm, seq }); }
+    close(); renderPatList(); choosePattern(pid);
+  };
+  if (ex) m.querySelector('.del').onclick = () => {
+    const i = list.indexOf(ex); if (i >= 0) list.splice(i, 1);
+    close(); renderPatList();
+    if (settings.pattern === id) choosePattern('free'); else { saveSettings(); renderSeg(); }
+  };
+  if (!ex) setTimeout(() => name.focus(), 40);
+}
+$('seg').addEventListener('mousedown', e => e.preventDefault());
+$('seg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.p === '+') editPattern(null); else choosePattern(b.dataset.p);
+});
+$('seg').addEventListener('contextmenu', e => {
+  const b = e.target.closest('button'); if (!b || !(settings.customPatterns || []).some(p => p.id === b.dataset.p)) return;
+  e.preventDefault(); editPattern(b.dataset.p);
+});
+$('patNew').onclick = () => editPattern(null);
+
 /* ---------- wiring ---------- */
 function openComments(focusId) { closePop(); closeDocs(); $('cmPanel').hidden = false; $('veilCm').hidden = false; renderComments(focusId); }
 function closeComments() { $('cmPanel').hidden = true; $('veilCm').hidden = true; }
@@ -1259,7 +1384,7 @@ for (const b of document.querySelectorAll('[data-c]')) tap(b, () => { if (docume
 for (const [id, k] of [['bB', 'b'], ['bI', 'i'], ['bU', 'u']]) tap($(id), () => toggleFmt(k));
 tap($('bEye'), () => { settings.colors = !settings.colors; saveSettings(); applySettings(); blip('n', true); });
 tap($('bPages'), () => togglePages());
-for (const b of $('seg').children) b.onclick = () => { settings.pattern = b.dataset.p; saveSettings(); applySettings(); updateModeUI(false); blip('n', true); };
+
 $('bAa').onclick = () => { const open = $('pop').hidden; closeDocs(); $('pop').hidden = !open; $('veilPop').hidden = !open; $('bAa').setAttribute('aria-pressed', open); for (const id of ['dR', 'dY', 'dG']) grow($(id)); };
 $('veilPop').onclick = () => closePop();
 $('bDocs').onclick = () => { closePop(); openDocs(); };
@@ -1354,7 +1479,9 @@ addEventListener('pagehide', () => { if (dirty) saveCurrent(true); });
 (() => {
   settings = Object.assign(settings, LS.get('sl.settings', {}));
   if (!LINES.includes(settings.line)) settings.line = 1.5;
-  if (!['free', 'climb', 'leap'].includes(settings.pattern)) settings.pattern = 'free';
+  if (!Array.isArray(settings.customPatterns)) settings.customPatterns = [];
+  if (!(settings.pattern === 'free' || patSeq(settings.pattern))) settings.pattern = 'free';
+  renderSeg(); renderPatList();
   if (!(settings.zoom >= 0.5 && settings.zoom <= 3)) settings.zoom = 1;
   if (!FONTS.includes(settings.font)) settings.font = 'Georgia';
   mode = ['r', 'y', 'g', 'n'].includes(settings.mode) ? settings.mode : 'r';
