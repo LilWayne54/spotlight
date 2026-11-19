@@ -77,6 +77,9 @@ body[data-mode="r"] .modecap b{color:#ff8a82} body[data-mode="y"] .modecap b{col
 .indent .doc p{text-indent:2.2em} .indent .doc p.cont{text-indent:0}
 .doc .c-r{background:var(--hr)} .doc .c-y{background:var(--hy)} .doc .c-g{background:var(--hg)}
 .doc span{-webkit-box-decoration-break:clone;box-decoration-break:clone;border-radius:2px}
+.doc .xs{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.42}
+.doc .u.xs{text-decoration:underline line-through}
+.doc .xa{text-decoration:underline dotted;text-decoration-thickness:1.5px;text-underline-offset:.22em;opacity:.6}
 .doc .b{font-weight:700} .doc .i{font-style:italic} .doc .u{text-decoration:underline;text-underline-offset:.15em}
 .plain .doc .c-r,.plain .doc .c-y,.plain .doc .c-g{background:none}
 body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color:#c89600} body[data-mode="g"] #ed{caret-color:#2f9a42}
@@ -130,7 +133,7 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .erow{display:flex;align-items:center;gap:10px;margin:0 0 8px}
 .erow>i{flex:none;width:14px;height:14px;border-radius:50%}
 .eseg{display:flex;flex:1;min-width:0;padding:3px;border-radius:10px;background:rgba(0,0,0,.28);box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
-.eseg button{flex:1;text-align:center;padding:6px 2px;border-radius:7px;font-size:11.5px;font-weight:600;color:var(--dim);white-space:nowrap;transition:background .18s,color .18s,scale .25s var(--spring)}
+.eseg button{flex:1;text-align:center;padding:6px 1px;border-radius:7px;font-size:11px;font-weight:600;color:var(--dim);white-space:nowrap;transition:background .18s,color .18s,scale .25s var(--spring)}
 .eseg button:active{scale:.92}
 .eseg button[aria-pressed="true"]{background:var(--cream);color:#2a241e}
 .ehint{font-size:11.5px;line-height:1.45;color:var(--faint);margin:0 0 12px}
@@ -393,6 +396,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
       <button class="ib txt" id="bB" title="Bold">B</button>
       <button class="ib txt" id="bI" title="Italic" style="font-style:italic">I</button>
       <button class="ib txt" id="bU" title="Underline" style="text-decoration:underline">U</button>
+    <button class="ib txt" id="bAct" title="Strike, alternate, or keep a version" style="text-decoration:line-through">S</button>
     </div>
   </div>
   <div class="tally" id="tally"><i class="tr"></i><i class="ty"></i><i class="tg"></i></div>
@@ -452,11 +456,11 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <h4 style="margin-top:4px">Edit rules</h4>
   <div class="row"><span>Use edit rules</span><button class="toggle" id="tRules" role="switch"></button></div>
   <div class="erules" id="eRules">
-  <div class="erow"><i style="background:var(--R)"></i><div class="eseg" data-rc="r"><button data-v="free">Free</button><button data-v="rewrite">Rewrite</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
-  <div class="erow"><i style="background:var(--Y)"></i><div class="eseg" data-rc="y"><button data-v="free">Free</button><button data-v="rewrite">Rewrite</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
-  <div class="erow"><i style="background:var(--G)"></i><div class="eseg" data-rc="g"><button data-v="free">Free</button><button data-v="rewrite">Rewrite</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
+  <div class="erow"><i style="background:var(--R)"></i><div class="eseg" data-rc="r"><button data-v="free">Free</button><button data-v="strike">Strike</button><button data-v="alternate">Alternate</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
+  <div class="erow"><i style="background:var(--Y)"></i><div class="eseg" data-rc="y"><button data-v="free">Free</button><button data-v="strike">Strike</button><button data-v="alternate">Alternate</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
+  <div class="erow"><i style="background:var(--G)"></i><div class="eseg" data-rc="g"><button data-v="free">Free</button><button data-v="strike">Strike</button><button data-v="alternate">Alternate</button><button data-v="forward">Forward</button><button data-v="lock">Locked</button></div></div>
   </div>
-  <p class="ehint" id="ehintRules">Free: edit anything. Rewrite: no tweaking. Try to change a finished sentence and the whole thing gets selected, so whatever you type next replaces it. Forward: no backspacing or going back in, even on the sentence you're writing. Just keep typing. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
+  <p class="ehint" id="ehintRules">Free: edit anything. Strike: finished sentences can't be edited, but you can strike one out (the S button) and write a new version. Alternate: like Strike, but the old version stays as a dotted alternate and your new one goes right after it. Use the S button on either one later to keep it and drop the other. Forward: no backspacing or going back in, even on the sentence you're writing. Just keep typing. Locked: finished sentences can't change. A sentence counts as finished once you start the next one.</p>
   <h4 style="margin-top:4px">Edit points</h4>
   <div class="prow" data-pc="r"><i style="background:var(--R)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
   <div class="prow" data-pc="y"><i style="background:var(--Y)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
@@ -517,9 +521,9 @@ let file = { path: null, foreign: false }, dirty = false, composing = false, own
 let currentId = null;
 
 /* ---------- runs model ---------- */
-const keyOf = r => 'c-' + r.c + (r.b ? ' b' : '') + (r.i ? ' i' : '') + (r.u ? ' u' : '') + (r.k ? ' k-' + r.k : '') + (r.pn ? ' pn-' + r.pn : '');
-const same = (a, b) => a.c === b.c && a.b === b.b && a.i === b.i && a.u === b.u && (a.k || '') === (b.k || '') && (a.pn || '') === (b.pn || '');
-function pushRun(runs, r) { if (!r.t) return; const l = runs[runs.length - 1]; if (l && same(l, r)) l.t += r.t; else runs.push({ t: r.t, c: r.c, b: !!r.b, i: !!r.i, u: !!r.u, k: r.k || '', pn: r.pn || '' }); }
+const keyOf = r => 'c-' + r.c + (r.b ? ' b' : '') + (r.i ? ' i' : '') + (r.u ? ' u' : '') + (r.x ? ' x' + r.x : '') + (r.k ? ' k-' + r.k : '') + (r.pn ? ' pn-' + r.pn : '');
+const same = (a, b) => a.c === b.c && a.b === b.b && a.i === b.i && a.u === b.u && (a.x || '') === (b.x || '') && (a.k || '') === (b.k || '') && (a.pn || '') === (b.pn || '');
+function pushRun(runs, r) { if (!r.t) return; const l = runs[runs.length - 1]; if (l && same(l, r)) l.t += r.t; else runs.push({ t: r.t, c: r.c, b: !!r.b, i: !!r.i, u: !!r.u, x: r.x || '', k: r.k || '', pn: r.pn || '' }); }
 function concatRuns(...arrs) { const o = []; for (const a of arrs) for (const r of a) pushRun(o, r); return o; }
 function splitRuns(runs, off) {
   const L = [], R = []; let acc = 0;
@@ -545,10 +549,11 @@ function pToRuns(p) {
         if (tg === 'B' || tg === 'STRONG' || cl.contains('b') || /^(bold|[6-9]00)$/.test(ch.style.fontWeight)) s.b = true;
         if (tg === 'I' || tg === 'EM' || cl.contains('i') || ch.style.fontStyle === 'italic') s.i = true;
         if (tg === 'U' || cl.contains('u') || /underline/.test(ch.style.textDecoration || '')) s.u = true;
+        if (cl.contains('xs')) s.x = 's'; else if (cl.contains('xa')) s.x = 'a';
         walk(ch, s);
       }
     }
-  })(p, { c: 'n', b: false, i: false, u: false, k: '', pn: '' });
+  })(p, { c: 'n', b: false, i: false, u: false, x: '', k: '', pn: '' });
   return runs;
 }
 function render(p, runs) {
@@ -566,7 +571,7 @@ function canonical(p) {
   for (const n of ch) {
     if (isBrk(n)) { prev = null; continue; }
     if (n.nodeName !== 'SPAN' || n.childNodes.length !== 1 || n.firstChild.nodeType !== 3 || !n.firstChild.data ||
-        /[​\r\n]/.test(n.firstChild.data) || !/^c-[rygn]( b)?( i)?( u)?( k-[a-z0-9]+)?( pn-[a-z0-9]+)?$/.test(n.className) || n.getAttribute('style')) return false;
+        /[​\r\n]/.test(n.firstChild.data) || !/^c-[rygn]( b)?( i)?( u)?( x[sa])?( k-[a-z0-9]+)?( pn-[a-z0-9]+)?$/.test(n.className) || n.getAttribute('style')) return false;
     if (prev && prev.className === n.className) return false;
     prev = n;
   }
@@ -867,17 +872,18 @@ function toggleFmt(k) {
 }
 
 /* ---------- edit rules ---------- */
-const RULE_DEF = { r: 'free', y: 'rewrite', g: 'free', n: 'free' };
-const ruleOf = c => settings.rulesOn === false ? 'free' : ((settings.rules && settings.rules[c]) || RULE_DEF[c] || 'free');
+const RULE_DEF = { r: 'free', y: 'strike', g: 'free', n: 'free' };
+const ruleOf = c => { if (settings.rulesOn === false) return 'free'; const v = (settings.rules && settings.rules[c]) || RULE_DEF[c] || 'free'; return v === 'rewrite' ? 'strike' : v; };
 const rulesActive = () => settings.rulesOn !== false && ['r', 'y', 'g'].some(c => ruleOf(c) !== 'free');
 function sentSpans(p) {
   const runs = pToRuns(p), cols = []; let txt = '';
   for (const r of runs) { txt += r.t; for (let k = 0; k < r.t.length; k++) cols.push(r.c); }
+  const xs = []; for (const r of runs) for (let k = 0; k < r.t.length; k++) xs.push(r.x || '');
   const out = [], re = /[^.!?…]*(?:[.!?…]+["'”’)\]*_]*|$)/g; let m;
   while ((m = re.exec(txt)) && m[0].length) {
     const lead = m[0].search(/\S/); if (lead < 0) continue;
     const st = m.index + lead, en = m.index + m[0].length;
-    out.push({ s: st, e: en, c: cols[st], done: TERM_END.test(m[0]) });
+    out.push({ s: st, e: en, c: cols[st], x: xs[st], done: TERM_END.test(m[0]) });
   }
   return { txt, out };
 }
@@ -905,7 +911,6 @@ function ruleBlock(A, B) {
       if (caret && caret.p === pi && caret.o >= x.e && !txt.slice(x.e).trim()) continue;
       const hit = ins ? (a > x.s && a < x.e) : (a < x.e && b > x.s);
       if (!hit) continue;
-      if (rule === 'rewrite' && !ins && a <= x.s && b >= x.e) { if (!ruleBlock.cover) ruleBlock.cover = { p: A.p, s: A.o, e: A.o }; continue; }
       return { ...x, rule, p: pi };
     }
   }
@@ -915,12 +920,9 @@ let ruleToastAt = 0, ruleMsg = '';
 function ruleToast(m) { if (m !== ruleMsg || Date.now() - ruleToastAt > 2500) toast(m); ruleMsg = m; ruleToastAt = Date.now(); }
 function refuseEdit(x) {
   const nm = NAMES[x.c] || 'This';
-  if (x.rule === 'rewrite') {
-    setSel({ a: { p: x.p, o: x.s }, f: { p: x.p, o: x.e } });
-    if (mode !== x.c) setMode(x.c, { typingOnly: true });
-    const p = paras()[x.p]; if (p) { p.classList.remove('rflash'); void p.offsetWidth; p.classList.add('rflash'); setTimeout(() => p.classList.remove('rflash'), 800); }
-    ruleToast(nm + ' is rewrite only. Type to replace the whole sentence.');
-  } else if (x.rule === 'forward') ruleToast(nm + ' is forward only. Keep going.');
+  if (x.rule === 'strike') ruleToast(nm + " can't be edited. Strike it with the S button and write a new one.");
+  else if (x.rule === 'alternate') ruleToast(nm + " can't be edited. Make an alternate with the S button.");
+  else if (x.rule === 'forward') ruleToast(nm + ' is forward only. Keep going.');
   else ruleToast(nm + ' sentences are locked.');
   blip('n', true);
 }
@@ -957,6 +959,52 @@ function ruleGate(e) {
   return false;
 }
 document.addEventListener('selectionchange', () => { if (!rw) return; const s = getSel(); if (s && collapsed(s) && (s.f.p !== rw.p || s.f.o < rw.s || s.f.o > rw.e)) rw = null; });
+
+/* ---------- strike & alternate ---------- */
+function flashPara(p) { if (!p) return; p.classList.remove('rflash'); void p.offsetWidth; p.classList.add('rflash'); setTimeout(() => p.classList.remove('rflash'), 800); }
+function editChars(pi, fn) { // fn(charStyle, index) -> new style or null to drop
+  const p = paras()[pi], out = []; let k = 0;
+  for (const r of pToRuns(p)) for (const ch of r.t) { const st = fn({ ...r, t: ch }, k++); if (st) pushRun(out, st); }
+  render(p, out);
+}
+function sentAction() {
+  const sel = getSel(); if (!sel) { toast('Put the cursor in a sentence first.'); return; }
+  const pos = sel.f, p = paras()[pos.p]; if (!p) return;
+  const { out } = sentSpans(p);
+  let i = out.findIndex(x => pos.o >= x.s && pos.o <= x.e);
+  if (i < 0) for (let k = out.length - 1; k >= 0; k--) if (out[k].e <= pos.o) { i = k; break; }
+  if (i < 0) { toast('Put the cursor in a sentence first.'); return; }
+  const x = out[i], inGroup = x.x === 'a' || (i > 0 && out[i - 1].x === 'a');
+  if (inGroup) {
+    let a = i, b = i;
+    if (x.x === 'a') { while (b + 1 < out.length && out[b + 1].x === 'a') b++; if (b + 1 < out.length) b++; }
+    while (a - 1 >= 0 && out[a - 1].x === 'a') a--;
+    const drop = new Set();
+    for (let j = a; j <= b; j++) {
+      if (j === i) continue;
+      const from = j === out.length - 1 && j > 0 ? out[j - 1].e : out[j].s, to = j === out.length - 1 ? out[j].e : out[j + 1].s;
+      for (let k = from; k < to; k++) drop.add(k);
+    }
+    pushUndo('style', true);
+    let caret = x.e; for (const k of drop) if (k < x.e) caret--;
+    editChars(pos.p, (st, k) => drop.has(k) ? null : (k >= x.s && k < x.e ? { ...st, x: '' } : st));
+    setSel(at(pos.p, caret)); flashPara(paras()[pos.p]); blip(x.c, false);
+    toast(b > a ? 'Kept this version.' : 'Kept it.');
+  } else if (x.x === 's') {
+    pushUndo('style', true);
+    editChars(pos.p, (st, k) => k >= x.s && k < x.e ? { ...st, x: '' } : st);
+    setSel(at(pos.p, x.e)); toast('Brought it back.');
+  } else {
+    const rule = ruleOf(x.c);
+    if (rule !== 'strike' && rule !== 'alternate') { toast(`Set ${NAMES[x.c] || 'this color'} to Strike or Alternate in the edit rules to use this.`); return; }
+    pushUndo('style', true);
+    editChars(pos.p, (st, k) => k >= x.s && k < x.e ? { ...st, x: rule === 'strike' ? 's' : 'a' } : st);
+    setSel(at(pos.p, x.e)); flashPara(paras()[pos.p]); blip(x.c, true);
+    rw = { p: pos.p, s: x.e, e: x.e };
+    if (rule === 'alternate') { if (mode !== x.c) setMode(x.c, { typingOnly: true }); toast('Alternate made. Write the new version right here.'); }
+  }
+  lastKind = null; changed();
+}
 
 /* ---------- edit points ---------- */
 const PTS_DEF = { on: false, max: 50, rate: 1 };
@@ -1100,7 +1148,7 @@ function baseName(p) { return (p || '').split(/[\\/]/).pop().replace(/\.docx$/i,
 function setDirty(v) { dirty = v; if (v) $('saved').textContent = ''; }
 function tally() {
   const c = { r: 0, y: 0, g: 0 };
-  for (const s of ed.querySelectorAll('span')) { const m = /c-([ryg])/.exec(s.className); if (m) c[m[1]] += s.textContent.replace(/\s/g, '').length; }
+  for (const s of ed.querySelectorAll('span:not(.xs)')) { const m = /c-([ryg])/.exec(s.className); if (m) c[m[1]] += s.textContent.replace(/\s/g, '').length; }
   const tot = c.r + c.y + c.g, el = $('tally');
   const pct = k => tot ? Math.round(c[k] / tot * 100) : 0;
   el.children[0].style.width = (tot ? c.r / tot * 100 : 0) + '%';
@@ -1111,8 +1159,9 @@ function tally() {
   stripUnknownAnchors(); $('cmBadge').textContent = cmOrder().length || '';
   if (!$('cmPanel').hidden && !$('cmPanel').contains(document.activeElement)) renderComments();
 }
+const liveText = p => p.querySelector('.xs') ? pToRuns(p).filter(r => r.x !== 's').map(r => r.t).join('') : textOf(p);
 function showCounts() {
-  const t = paras().map(textOf).join('\n');
+  const t = paras().map(liveText).join('\n');
   const words = (t.match(/[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu) || []).length;
   const chars = t.replace(/\n/g, '').length;
   const sents = t.split(/[.!?…]+["'”’)\]]*(?=\s|$)|\n/).filter(x => /[\p{L}\p{N}]/u.test(x)).length;
@@ -1147,7 +1196,7 @@ function applySettings() {
   }
   paintPts();
   $('eRules').classList.toggle('off', settings.rulesOn === false);
-  for (const g of document.querySelectorAll('.eseg')) { const v = (settings.rules && settings.rules[g.dataset.rc]) || RULE_DEF[g.dataset.rc]; for (const b of g.children) b.setAttribute('aria-pressed', b.dataset.v === v); }
+  for (const g of document.querySelectorAll('.eseg')) { let v = (settings.rules && settings.rules[g.dataset.rc]) || RULE_DEF[g.dataset.rc]; if (v === 'rewrite') v = 'strike'; for (const b of g.children) b.setAttribute('aria-pressed', b.dataset.v === v); }
   if (typeof pagesOn !== 'undefined') { applyZoom(); schedulePages(); }
 }
 
@@ -1222,7 +1271,7 @@ function parseDocXml(xml) {
       if (ln === 'commentRangeStart') { active.push(cid(el)); continue; }
       if (ln === 'commentRangeEnd') { const id = cid(el), i = active.lastIndexOf(id); if (i >= 0) active.splice(i, 1); continue; }
       const r = el, rPr = child(r, 'rPr'), u = child(rPr, 'u');
-      const st = { c: colorOf(rPr), b: onOff(rPr, 'b'), i: onOff(rPr, 'i'), u: !!u && !/^(none|0|false)$/.test(wval(u) || ''), k: active.length ? active[active.length - 1] : '' };
+      const st = { c: colorOf(rPr), b: onOff(rPr, 'b'), i: onOff(rPr, 'i'), u: !!u && !/^(none|0|false|dotted)$/.test(wval(u) || ''), x: onOff(rPr, 'strike') ? 's' : (u && wval(u) === 'dotted' ? 'a' : ''), k: active.length ? active[active.length - 1] : '' };
       let t = '';
       for (const ch of r.children) {
         if (ch.namespaceURI !== W) continue;
@@ -1268,10 +1317,12 @@ function buildDocXml(withColors) {
       const k = (r.k && num[r.k] !== undefined && !closed.has(r.k)) ? r.k : '';
       if (k !== cur) { x += closeCur(); if (k) { x += `<w:commentRangeStart w:id="${num[k]}"/>`; cur = k; } }
       if (r.pn && beats[r.pn]) { bmk++; x += `<w:bookmarkStart w:id="${bmk}" w:name="beat_${r.pn}"/><w:bookmarkEnd w:id="${bmk}"/>`; }
+      if (r.x === 's' && !withColors) continue;
       let rp = '';
       if (r.b) rp += '<w:b/><w:bCs/>';
       if (r.i) rp += '<w:i/><w:iCs/>';
-      if (r.u) rp += '<w:u w:val="single"/>';
+      if (r.x === 's') rp += '<w:strike/>';
+      if (r.u || r.x === 'a') rp += `<w:u w:val="${r.x === 'a' ? 'dotted' : 'single'}"/>`;
       if (withColors && FILL[r.c]) rp += `<w:shd w:val="clear" w:color="auto" w:fill="${FILL[r.c]}"/>`;
       const pr = rp ? `<w:rPr>${rp}</w:rPr>` : '';
       r.t.split('\t').forEach((seg, i) => {
@@ -1828,7 +1879,7 @@ const DARES = ['Put a smell in it', 'Start with a sound', 'Under seven words', '
 let combo = 0, comboAt = 0, lastAct = Date.now(), run = null, runShown = false, dare = null;
 const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26];
 const COLHEX = { r: '#e5534b', y: '#f2c230', g: '#4cbb5e', n: '#d8cfc0' };
-function wordCount() { const t = paras().map(textOf).join('\n'); return (t.match(/[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu) || []).length; }
+function wordCount() { const t = paras().map(liveText).join('\n'); return (t.match(/[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu) || []).length; }
 function startRun() { run = { start: Date.now(), cols: [], words0: wordCount(), best: 0 }; runShown = false; $('runcard').hidden = true; }
 function activity() { const now = Date.now(); if (!run || (runShown && now - lastAct > 90000)) startRun(); lastAct = now; }
 // a sentence only scores once, and only if you actually wrote it
@@ -2335,6 +2386,7 @@ function tap(el, fn) {
 }
 for (const b of document.querySelectorAll('[data-c]')) tap(b, () => { if (document.activeElement !== ed && !pagesOn) ed.focus(); setMode(b.dataset.c, { click: true }); });
 for (const [id, k] of [['bB', 'b'], ['bI', 'i'], ['bU', 'u']]) tap($(id), () => toggleFmt(k));
+tap($('bAct'), () => { if (document.activeElement !== ed && !pagesOn) ed.focus(); sentAction(); });
 tap($('bEye'), () => { settings.colors = !settings.colors; saveSettings(); applySettings(); blip('n', true); });
 tap($('bPages'), () => togglePages());
 
