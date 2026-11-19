@@ -127,6 +127,23 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .meaning textarea:focus{background:rgba(255,255,255,.13)}
 .linkbtn{font-size:12px;color:var(--dim);padding:4px 8px;border-radius:8px}
 .linkbtn:hover{background:rgba(255,255,255,.08);color:var(--cream)}
+.doc span[class*=" k-"]{box-shadow:inset 0 -2px 0 rgba(124,92,214,.75)}
+.cmbtn{position:relative}
+.cmbtn .badge{position:absolute;top:3px;right:2px;min-width:15px;height:15px;padding:0 4px;border-radius:99px;background:#7c5cd6;color:#fff;font:700 9.5px/15px system-ui,sans-serif;text-align:center}
+.cmbtn .badge:empty{display:none}
+.cards{display:flex;flex-direction:column;gap:8px}
+.card{padding:10px 10px 8px;border-radius:12px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);transition:background .15s,box-shadow .15s}
+.card.on{background:rgba(124,92,214,.16);box-shadow:inset 0 0 0 1.5px rgba(124,92,214,.7)}
+.card .q{display:block;width:100%;margin-bottom:6px;padding-left:8px;border-left:2px solid #7c5cd6;font-size:12px;color:var(--dim);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.card .q.gone{border-left-color:rgba(255,255,255,.2)}
+.card textarea{display:block;width:100%;resize:none;overflow:hidden;border:0;outline:none;background:transparent;color:var(--cream);font:inherit;font-size:13.5px;line-height:1.4;padding:2px 0;user-select:text;-webkit-user-select:text;field-sizing:content;min-height:22px}
+.card textarea::placeholder{color:var(--faint)}
+.card .meta{display:flex;align-items:center;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--faint)}
+.card .x{padding:3px 8px;border-radius:7px;font-size:11.5px;color:var(--faint)}
+.card .x:hover,.card .x:active{background:rgba(255,120,100,.14);color:#ff9a8a}
+.cmempty{padding:14px 4px;color:var(--faint);font-size:12.5px;line-height:1.5}
+.cmadd{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;margin-bottom:10px;border-radius:11px;background:#7c5cd6;color:#fff;font-weight:600;transition:scale .2s var(--spring)}
+.cmadd:active{scale:.96}
 .toggle{width:46px;height:28px;border-radius:99px;background:rgba(255,255,255,.14);position:relative;transition:background .2s}
 .toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:translate .25s var(--spring)}
 .toggle[aria-checked="true"]{background:var(--G)}
@@ -168,6 +185,7 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
     <button class="ib" id="bDocs" title="Documents"><svg viewBox="0 0 20 20"><path d="M3 5h14M3 10h14M3 15h9"/></svg></button>
     <button class="title" id="title" title="Rename">Untitled</button>
     <span class="saved" id="saved"></span>
+    <button class="ib cmbtn" id="bCm" title="Comments"><svg viewBox="0 0 20 20"><path d="M3.5 4.5h13v9h-7l-4 3v-3h-2z"/></svg><span class="badge" id="cmBadge"></span></button>
     <button class="ib" id="bPages" title="Pages view" aria-pressed="false"><svg viewBox="0 0 20 20"><path d="M6.5 2.5h9v12h-9z M3.5 5.5v12h9"/></svg></button>
     <button class="ib" id="bEye" title="Show or hide colors" aria-pressed="true"><svg viewBox="0 0 20 20"><path d="M1.8 10S5 4.5 10 4.5 18.2 10 18.2 10 15 15.5 10 15.5 1.8 10 1.8 10z"/><circle cx="10" cy="10" r="2.6"/></svg></button>
     <button class="ib txt" id="bAa" title="Settings" style="font-weight:600">Aa</button>
@@ -232,6 +250,12 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
   <h4 style="margin-top:12px">Your documents</h4>
   <ul class="doclist" id="doclist"></ul>
 </div>
+<div class="veil" id="veilCm" hidden></div>
+<div class="sheetpanel" id="cmPanel" hidden>
+  <div class="grab"></div>
+  <button class="cmadd" id="cmAdd">+ Comment on selected text</button>
+  <div class="cards" id="cmList"></div>
+</div>
 <input type="file" id="fileIn" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
 <div class="toast" id="toast"></div>
 
@@ -260,9 +284,9 @@ let file = { path: null, foreign: false }, dirty = false, composing = false, own
 let currentId = null;
 
 /* ---------- runs model ---------- */
-const keyOf = r => 'c-' + r.c + (r.b ? ' b' : '') + (r.i ? ' i' : '') + (r.u ? ' u' : '');
-const same = (a, b) => a.c === b.c && a.b === b.b && a.i === b.i && a.u === b.u;
-function pushRun(runs, r) { if (!r.t) return; const l = runs[runs.length - 1]; if (l && same(l, r)) l.t += r.t; else runs.push({ t: r.t, c: r.c, b: !!r.b, i: !!r.i, u: !!r.u }); }
+const keyOf = r => 'c-' + r.c + (r.b ? ' b' : '') + (r.i ? ' i' : '') + (r.u ? ' u' : '') + (r.k ? ' k-' + r.k : '');
+const same = (a, b) => a.c === b.c && a.b === b.b && a.i === b.i && a.u === b.u && (a.k || '') === (b.k || '');
+function pushRun(runs, r) { if (!r.t) return; const l = runs[runs.length - 1]; if (l && same(l, r)) l.t += r.t; else runs.push({ t: r.t, c: r.c, b: !!r.b, i: !!r.i, u: !!r.u, k: r.k || '' }); }
 function concatRuns(...arrs) { const o = []; for (const a of arrs) for (const r of a) pushRun(o, r); return o; }
 function splitRuns(runs, off) {
   const L = [], R = []; let acc = 0;
@@ -284,13 +308,14 @@ function pToRuns(p) {
         if (ch.tagName === 'BR' || isBrk(ch)) continue;
         const s = { ...st }, cl = ch.classList, tg = ch.tagName;
         for (const c of ['r', 'y', 'g', 'n']) if (cl.contains('c-' + c)) s.c = c;
+        for (const x of cl) if (x.startsWith('k-')) s.k = x.slice(2);
         if (tg === 'B' || tg === 'STRONG' || cl.contains('b') || /^(bold|[6-9]00)$/.test(ch.style.fontWeight)) s.b = true;
         if (tg === 'I' || tg === 'EM' || cl.contains('i') || ch.style.fontStyle === 'italic') s.i = true;
         if (tg === 'U' || cl.contains('u') || /underline/.test(ch.style.textDecoration || '')) s.u = true;
         walk(ch, s);
       }
     }
-  })(p, { c: 'n', b: false, i: false, u: false });
+  })(p, { c: 'n', b: false, i: false, u: false, k: '' });
   return runs;
 }
 function render(p, runs) {
@@ -307,7 +332,7 @@ function canonical(p) {
   for (const n of ch) {
     if (isBrk(n)) { prev = null; continue; }
     if (n.nodeName !== 'SPAN' || n.childNodes.length !== 1 || n.firstChild.nodeType !== 3 || !n.firstChild.data ||
-        /[​\r\n]/.test(n.firstChild.data) || !/^c-[rygn]( b)?( i)?( u)?$/.test(n.className) || n.getAttribute('style')) return false;
+        /[​\r\n]/.test(n.firstChild.data) || !/^c-[rygn]( b)?( i)?( u)?( k-[a-z0-9]+)?$/.test(n.className) || n.getAttribute('style')) return false;
     if (prev && prev.className === n.className) return false;
     prev = n;
   }
@@ -620,6 +645,8 @@ function tally() {
   el.children[2].style.width = (tot ? c.g / tot * 100 : 0) + '%';
   el.title = tot ? `Red ${pct('r')}% · Yellow ${pct('y')}% · Green ${pct('g')}%` : 'Your color mix shows up here';
   showCounts(); schedulePages();
+  stripUnknownAnchors(); $('cmBadge').textContent = cmOrder().length || '';
+  if (!$('cmPanel').hidden && !$('cmPanel').contains(document.activeElement)) renderComments();
 }
 function showCounts() {
   const t = paras().map(textOf).join('\n');
@@ -693,24 +720,40 @@ function parseDocXml(xml) {
   const d = new DOMParser().parseFromString(xml, 'application/xml');
   if (d.getElementsByTagName('parsererror').length) throw new Error("Couldn't read this document.");
   const body = d.getElementsByTagNameNS(W, 'body')[0];
-  if (!body) return { paras: [[]], indent: false };
-  const out = []; let ind = 0;
+  if (!body) return { paras: [[]], indent: false, cmap: {} };
+  const out = [], cmap = {}, active = []; let ind = 0;
+  const cid = el => { const n = el.getAttributeNS(W, 'id') || el.getAttribute('w:id'); if (!(n in cmap)) cmap[n] = newCmId(); return cmap[n]; };
   for (const p of body.getElementsByTagNameNS(W, 'p')) {
+    let skipP = false;
+    for (let a = p.parentNode; a && a !== body; a = a.parentNode) if (a.namespaceURI === W && a.localName === 'p') { skipP = true; break; }
+    if (skipP) continue;
     const runs = [];
-    for (const r of p.getElementsByTagNameNS(W, 'r')) {
-      let a = r.parentNode, skip = false;
-      while (a && a !== p) { if (a.namespaceURI === W && (a.localName === 'p' || a.localName === 'del')) { skip = true; break; } a = a.parentNode; }
-      if (skip) continue;
-      const rPr = child(r, 'rPr'), u = child(rPr, 'u');
-      const st = { c: colorOf(rPr), b: onOff(rPr, 'b'), i: onOff(rPr, 'i'), u: !!u && !/^(none|0|false)$/.test(wval(u) || '') };
+    const tw = d.createTreeWalker(p, NodeFilter.SHOW_ELEMENT, { acceptNode: n => (n !== p && n.namespaceURI === W && (n.localName === 'p' || n.localName === 'del' || n.localName === 'r')) ? (n.localName === 'r' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) : NodeFilter.FILTER_SKIP });
+    // walk ranges and runs in order (runs are handled whole)
+    const order = [];
+    (function walk(n) {
+      for (const ch of n.children) {
+        if (ch.namespaceURI !== W) { walk(ch); continue; }
+        const ln = ch.localName;
+        if (ln === 'p' || ln === 'del') continue;
+        if (ln === 'r' || ln === 'commentRangeStart' || ln === 'commentRangeEnd') order.push(ch);
+        else walk(ch);
+      }
+    })(p);
+    for (const el of order) {
+      const ln = el.localName;
+      if (ln === 'commentRangeStart') { active.push(cid(el)); continue; }
+      if (ln === 'commentRangeEnd') { const id = cid(el), i = active.lastIndexOf(id); if (i >= 0) active.splice(i, 1); continue; }
+      const r = el, rPr = child(r, 'rPr'), u = child(rPr, 'u');
+      const st = { c: colorOf(rPr), b: onOff(rPr, 'b'), i: onOff(rPr, 'i'), u: !!u && !/^(none|0|false)$/.test(wval(u) || ''), k: active.length ? active[active.length - 1] : '' };
       let t = '';
       for (const ch of r.children) {
         if (ch.namespaceURI !== W) continue;
-        const ln = ch.localName;
-        if (ln === 't') t += ch.textContent;
-        else if (ln === 'tab') t += '\t';
-        else if (ln === 'br' || ln === 'cr') t += ' ';
-        else if (ln === 'noBreakHyphen') t += '-';
+        const l2 = ch.localName;
+        if (l2 === 't') t += ch.textContent;
+        else if (l2 === 'tab') t += '\t';
+        else if (l2 === 'br' || l2 === 'cr') t += ' ';
+        else if (l2 === 'noBreakHyphen') t += '-';
       }
       pushRun(runs, { ...st, t });
     }
@@ -718,14 +761,35 @@ function parseDocXml(xml) {
     if (indEl && +(indEl.getAttributeNS(W, 'firstLine') || indEl.getAttribute('w:firstLine') || 0) > 0) ind++;
     out.push(runs);
   }
-  return { paras: out.length ? out : [[]], indent: out.length > 0 && ind / out.length > 0.5 };
+  return { paras: out.length ? out : [[]], indent: out.length > 0 && ind / out.length > 0.5, cmap };
+}
+function parseCommentsXml(xml, cmap) {
+  const res = {};
+  if (!xml) return res;
+  const d = new DOMParser().parseFromString(xml, 'application/xml');
+  for (const c of d.getElementsByTagNameNS(W, 'comment')) {
+    const n = c.getAttributeNS(W, 'id') || c.getAttribute('w:id');
+    if (!(n in cmap)) continue;
+    const text = [...c.getElementsByTagNameNS(W, 'p')].map(p => [...p.getElementsByTagNameNS(W, 't')].map(t => t.textContent).join('')).join('\n');
+    const at = Date.parse(c.getAttributeNS(W, 'date') || c.getAttribute('w:date') || '') || Date.now();
+    res[cmap[n]] = { text, at };
+  }
+  return res;
 }
 function xmlEsc(s) { return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function usedComments() { return cmOrder().filter(id => anchorSpans(id).length); }
 function buildDocXml(withColors) {
   let body = '';
-  for (const p of paras()) {
+  const ids = withColors ? usedComments() : [], num = {}, closed = new Set();
+  ids.forEach((id, i) => num[id] = i);
+  let cur = '';
+  const closeCur = () => { if (!cur) return ''; const n = num[cur]; closed.add(cur); cur = ''; return `<w:commentRangeEnd w:id="${n}"/><w:r><w:commentReference w:id="${n}"/></w:r>`; };
+  const ps = paras();
+  ps.forEach((p, pi) => {
     let x = '<w:p>' + (settings.indent ? '<w:pPr><w:ind w:firstLine="720"/></w:pPr>' : '');
     for (const r of pToRuns(p)) {
+      const k = (r.k && num[r.k] !== undefined && !closed.has(r.k)) ? r.k : '';
+      if (k !== cur) { x += closeCur(); if (k) { x += `<w:commentRangeStart w:id="${num[k]}"/>`; cur = k; } }
       let rp = '';
       if (r.b) rp += '<w:b/><w:bCs/>';
       if (r.i) rp += '<w:i/><w:iCs/>';
@@ -737,9 +801,20 @@ function buildDocXml(withColors) {
         if (seg) x += `<w:r>${pr}<w:t xml:space="preserve">${xmlEsc(seg)}</w:t></w:r>`;
       });
     }
+    if (pi === ps.length - 1) x += closeCur();
     body += x + '</w:p>';
-  }
+  });
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="${W}"><w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+}
+function buildCommentsXml() {
+  const ids = usedComments();
+  if (!ids.length) return null;
+  const items = ids.map((id, i) => {
+    const c = comments[id], date = new Date(c.at || Date.now()).toISOString().replace(/\.\d+Z$/, 'Z');
+    const ps = (c.text || '').split('\n').map(l => `<w:p><w:r><w:t xml:space="preserve">${xmlEsc(l)}</w:t></w:r></w:p>`).join('');
+    return `<w:comment w:id="${i}" w:author="Me" w:initials="Me" w:date="${date}">${ps}</w:comment>`;
+  }).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments xmlns:w="${W}">${items}</w:comments>`;
 }
 function buildStyles() {
   const f = xmlEsc(settings.font), sz = Math.round(settings.size * 2), ln = Math.round(settings.line * 240);
@@ -919,26 +994,27 @@ async function readDocx(buf) {
   const b = new Uint8Array(buf), dv = new DataView(buf); let e = -1;
   for (let i = b.length - 22; i >= Math.max(0, b.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
   if (e < 0) throw new Error("This doesn't look like a .docx file.");
-  const n = dv.getUint16(e + 10, true), dec = new TextDecoder(); let p = dv.getUint32(e + 16, true), doc = null, app = null;
+  const n = dv.getUint16(e + 10, true), dec = new TextDecoder(); let p = dv.getUint32(e + 16, true), doc = null, app = null, cmx = null;
   for (let k = 0; k < n; k++) {
     const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
     const name = dec.decode(b.subarray(p + 46, p + 46 + nl)); p += 46 + nl + xl + cl;
-    if (name !== 'word/document.xml' && name !== 'docProps/app.xml') continue;
+    if (name !== 'word/document.xml' && name !== 'docProps/app.xml' && name !== 'word/comments.xml') continue;
     const ds = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true), raw = b.subarray(ds, ds + csize);
     const data = method === 0 ? raw : method === 8 ? await inflateRaw(raw) : null;
     if (!data) continue;
-    if (name === 'word/document.xml') doc = dec.decode(data); else app = dec.decode(data);
+    if (name === 'word/document.xml') doc = dec.decode(data); else if (name === 'word/comments.xml') cmx = dec.decode(data); else app = dec.decode(data);
   }
   if (!doc) throw new Error('This .docx file has no document inside it.');
-  return { documentXml: doc, ours: !!app && /<Application>Stoplight<\/Application>/.test(app) };
+  return { documentXml: doc, commentsXml: cmx, ours: !!app && /<Application>Stoplight<\/Application>/.test(app) };
 }
-function buildDocxBlob(documentXml, stylesXml) {
+function buildDocxBlob(documentXml, stylesXml, commentsXml) {
   const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
   return zipStore([
-    { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>' },
+    { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' + (commentsXml ? '<Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>' : '') + '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>' },
     { name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>' },
-    { name: 'word/_rels/document.xml.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+    { name: 'word/_rels/document.xml.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' + (commentsXml ? '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>' : '') + '</Relationships>' },
     { name: 'word/document.xml', data: documentXml },
+    ...(commentsXml ? [{ name: 'word/comments.xml', data: commentsXml }] : []),
     { name: 'word/styles.xml', data: stylesXml },
     { name: 'docProps/app.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Stoplight</Application></Properties>' },
     { name: 'docProps/core.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified></cp:coreProperties>` }
@@ -956,6 +1032,7 @@ function saveCurrent(quiet) {
   const list = idx(), d = list.find(x => x.id === currentId);
   if (!d) return;
   if (!LS.set('sl.doc.' + currentId, cleanHTML())) return;
+  LS.set('sl.cm.' + currentId, comments);
   d.updated = Date.now();
   if (!d.named) d.title = firstWords();
   list.sort((a, b) => b.updated - a.updated);
@@ -973,8 +1050,9 @@ function createDoc(html, title) {
 function openDoc(id, focus) {
   if (currentId && dirty) saveCurrent(true);
   currentId = id; LS.set('sl.current', id);
+  comments = LS.get('sl.cm.' + id, {}) || {}; activeCm = null;
   ed.innerHTML = LS.get('sl.doc.' + id, '<p><br></p>') || '<p><br></p>';
-  removeBreaks(); clean();
+  removeBreaks(); clean(); renderComments();
   undoStack = []; redoStack = []; lastKind = null; dirty = false;
   titleUI(); tally(); placeholder();
   $('desk').scrollTop = 0;
@@ -990,7 +1068,7 @@ async function deleteDoc(id) {
   const d = entry(id);
   const a = await ask(`Delete “${docTitle(d)}”? This can't be undone.`, [['cancel', 'Cancel'], ['del', 'Delete', true, 'danger']]);
   if (a !== 'del') return;
-  LS.del('sl.doc.' + id);
+  LS.del('sl.doc.' + id); LS.del('sl.cm.' + id);
   const list = idx().filter(x => x.id !== id);
   LS.set('sl.index', list);
   if (id === currentId) { currentId = null; if (list.length) openDoc(list[0].id); else openDoc(createDoc('')); }
@@ -1027,13 +1105,14 @@ async function importFile(f) {
     for (const runs of d.paras) { const p = document.createElement('p'); render(p, runs); tmp.appendChild(p); }
     if (dirty) saveCurrent(true);
     const id = createDoc(tmp.innerHTML || '<p><br></p>', f.name.replace(/\.docx$/i, ''));
+    LS.set('sl.cm.' + id, parseCommentsXml(r.commentsXml, d.cmap));
     openDoc(id); closeDocs(); toast('Imported ' + f.name.replace(/\.docx$/i, ''));
   } catch (e) { toast(e.message || "Couldn't read that file", true); }
 }
 async function exportDocx(withColors) {
   saveCurrent(true);
   const name = (docTitle(entry(currentId)) || 'Untitled').replace(/[\\/:*?"<>|]/g, '').slice(0, 80) + (withColors ? '' : ' (clean)') + '.docx';
-  const blob = buildDocxBlob(buildDocXml(withColors), buildStyles());
+  const blob = buildDocxBlob(buildDocXml(withColors), buildStyles(), withColors ? buildCommentsXml() : null);
   const f = new File([blob], name, { type: blob.type });
   if (navigator.canShare && navigator.canShare({ files: [f] })) {
     try { await navigator.share({ files: [f] }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
@@ -1060,7 +1139,117 @@ async function askText(msg, value) {
   });
 }
 
+/* ---------- comments ---------- */
+let comments = {}, activeCm = null;
+function newCmId() { return Math.random().toString(36).slice(2, 8).replace(/[^a-z0-9]/g, 'x') || 'c' + Date.now().toString(36); }
+function anchorSpans(id) { return [...ed.querySelectorAll('span.k-' + id)]; }
+function cmOrder() {
+  const seen = [];
+  for (const sp of ed.querySelectorAll('span[class*="k-"]')) { const m = /(?:^| )k-([a-z0-9]+)/.exec(sp.className); if (m && comments[m[1]] && !seen.includes(m[1])) seen.push(m[1]); }
+  for (const id of Object.keys(comments)) if (!seen.includes(id)) seen.push(id);
+  return seen;
+}
+function stripUnknownAnchors() {
+  let hit = false;
+  for (const sp of ed.querySelectorAll('span[class*="k-"]')) {
+    const m = /(?:^| )k-([a-z0-9]+)/.exec(sp.className);
+    if (m && !comments[m[1]]) { sp.classList.remove('k-' + m[1]); hit = true; }
+  }
+  if (hit) clean();
+}
+function cmAtCaret() {
+  const sel = getSelection(); if (!sel.rangeCount || !ed.contains(sel.focusNode)) return null;
+  let n = sel.focusNode; if (n.nodeType === 3) n = n.parentNode;
+  const m = n && n.className && /(?:^| )k-([a-z0-9]+)/.exec(n.className);
+  return m && comments[m[1]] ? m[1] : null;
+}
+function addComment() {
+  let s = getSel();
+  if (!s) { toast('Click into your text first'); return; }
+  if (collapsed(s)) {
+    const p = paras()[s.f.p], t = textOf(p); let a = s.f.o, b = s.f.o;
+    while (a > 0 && /\S/.test(t[a - 1])) a--;
+    while (b < t.length && /\S/.test(t[b])) b++;
+    if (a === b) { toast('Select some text to comment on'); return; }
+    s = { a: { p: s.f.p, o: a }, f: { p: s.f.p, o: b } }; setSel(s);
+  }
+  const id = newCmId();
+  pushUndo('style', true);
+  comments[id] = { text: '', at: Date.now() };
+  styleSel(() => ({ k: id }));
+  changed(); openComments(id);
+}
+function removeComment(id) {
+  pushUndo('style', true);
+  delete comments[id];
+  stripUnknownAnchors();
+  if (activeCm === id) activeCm = null;
+  changed(); renderComments();
+}
+function selectAnchor(id) {
+  const sp = anchorSpans(id); if (!sp.length) return;
+  const a = sp[0].firstChild, b = sp[sp.length - 1].firstChild;
+  ed.focus();
+  ownSelAt = performance.now();
+  getSelection().setBaseAndExtent(a, 0, b, b.data.length);
+  sp[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  setActiveCm(id);
+}
+function setActiveCm(id) {
+  if (activeCm === id) return;
+  activeCm = id;
+  let st = $('cmStyle'); if (!st) { st = document.createElement('style'); st.id = 'cmStyle'; document.head.appendChild(st); }
+  st.textContent = id ? `.doc span.k-${id}{box-shadow:inset 0 -2px 0 #7c5cd6,0 0 0 2px rgba(124,92,214,.35)}` : '';
+  for (const c of $('cmList').children) c.classList.toggle('on', c.dataset.id === id);
+  const card = id && $('cmList').querySelector(`[data-id="${id}"]`);
+  if (card && !$('cmPanel').hidden) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+function growTA(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+function renderComments(focusId) {
+  const list = $('cmList'); list.textContent = '';
+  const ids = cmOrder();
+  $('cmBadge').textContent = ids.length || '';
+  if (!ids.length) {
+    const e = document.createElement('div'); e.className = 'cmempty';
+    e.textContent = 'No comments yet. Select some text (or put your cursor in a word) and add one.';
+    list.appendChild(e); return;
+  }
+  for (const id of ids) {
+    const c = comments[id], sp = anchorSpans(id), quote = sp.map(x => x.textContent).join('').trim();
+    const card = document.createElement('div'); card.className = 'card' + (id === activeCm ? ' on' : ''); card.dataset.id = id;
+    const q = document.createElement('button'); q.className = 'q' + (quote ? '' : ' gone');
+    q.textContent = quote ? '“' + (quote.length > 70 ? quote.slice(0, 70) + '…' : quote) + '”' : '(its text was deleted)';
+    q.onclick = () => selectAnchor(id);
+    const ta = document.createElement('textarea'); ta.rows = 1; ta.placeholder = 'Write a note…'; ta.value = c.text || '';
+    ta.addEventListener('input', () => { growTA(ta); c.text = ta.value; changed(); });
+    ta.addEventListener('focus', () => setActiveCm(id));
+    ta.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); ta.blur(); } });
+    const meta = document.createElement('div'); meta.className = 'meta';
+    const when = document.createElement('span'); when.textContent = new Date(c.at || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = 'Delete'; x.onclick = () => removeComment(id);
+    meta.append(when, x);
+    card.append(q, ta, meta); list.appendChild(card);
+    requestAnimationFrame(() => growTA(ta));
+    if (id === focusId) setTimeout(() => { ta.focus(); }, 60);
+  }
+}
+document.addEventListener('selectionchange', () => {
+  const s = getSelection(); if (!s.rangeCount || !ed.contains(s.focusNode)) return;
+  setActiveCm(cmAtCaret());
+});
+
 /* ---------- wiring ---------- */
+function openComments(focusId) { closePop(); closeDocs(); $('cmPanel').hidden = false; $('veilCm').hidden = false; renderComments(focusId); }
+function closeComments() { $('cmPanel').hidden = true; $('veilCm').hidden = true; }
+$('veilCm').onclick = () => closeComments();
+tap($('bCm'), () => {
+  const s = getSel(), inEd = document.activeElement === ed;
+  if (inEd && s && !collapsed(s)) { addComment(); return; }
+  const id = inEd ? cmAtCaret() : null;
+  openComments(id || undefined);
+  if (id) { setActiveCm(id); }
+});
+tap($('cmAdd'), () => { const s = getSel(); if (!s) { closeComments(); toast('Select some text first, then tap 💬'); return; } addComment(); });
 function tap(el, fn) {
   el.addEventListener('touchstart', e => { e.preventDefault(); fn(); }, { passive: false });
   el.addEventListener('mousedown', e => e.preventDefault());
@@ -1131,7 +1320,7 @@ document.addEventListener('keydown', e => {
   if (document.querySelector('.mveil')) return;
   if (!mod) {
     if (e.key === 'Tab' && document.activeElement === ed) { e.preventDefault(); pushUndo('type', true); insertText('\t'); changed(); }
-    else if (e.key === 'Escape') { closePop(); closeDocs(); }
+    else if (e.key === 'Escape') { closePop(); closeDocs(); closeComments(); }
     return;
   }
   const k = e.key.toLowerCase(), code = e.code, hit = fn => { e.preventDefault(); fn(); };
@@ -1147,6 +1336,7 @@ document.addEventListener('keydown', e => {
   if (k === 's') return hit(() => { saveCurrent(); });
   if (k === 'o') return hit(() => $('fileIn').click());
   if (e.shiftKey && k === 'p') return hit(() => togglePages());
+  if (e.altKey && k === 'm') return hit(addComment);
   if (e.shiftKey && k === 'h') return hit(() => { settings.colors = !settings.colors; saveSettings(); applySettings(); });
 }, true);
 
