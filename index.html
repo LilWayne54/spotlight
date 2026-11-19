@@ -217,6 +217,38 @@ body[data-mode="r"]{--mc:#e5534b} body[data-mode="y"]{--mc:#f2c230} body[data-mo
 .foot{justify-content:flex-start}
 .foot #counts{margin-left:auto}
 .runcard{left:12px;right:12px;width:auto;bottom:calc(var(--sb) + 36px)}
+/* ---- story tray ---- */
+.work{flex:1;min-height:0;display:flex;position:relative}
+.work>.desk{flex:1;min-width:0}
+.tray{flex:none;position:relative;z-index:3;display:flex;flex-direction:column;width:var(--trayw,260px);background:#2a2520;box-shadow:1px 0 0 rgba(255,255,255,.05),8px 0 24px -8px rgba(0,0,0,.45)}
+.tray[hidden]{display:none}
+.tray .railhead{position:static;margin:0;padding:8px 8px 6px;background:none;box-shadow:none;opacity:1;border-radius:0}
+.traybody{flex:1;min-height:0;position:relative;overflow:hidden;margin:0 8px;border-radius:6px;background-color:#efe8db;
+  background-image:linear-gradient(rgba(60,45,30,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(60,45,30,.07) 1px,transparent 1px);background-size:24px 24px;box-shadow:inset 0 0 0 1px rgba(60,45,30,.2)}
+.tray.whole .traybody{cursor:pointer}
+#traygraph,#traygraph svg{position:absolute;inset:0;display:block;width:100%;height:100%}
+.traybody .rcard{position:absolute;left:6px;right:6px;zoom:var(--tz,1)}
+.trayfoot{display:flex;align-items:center;gap:3px;padding:6px 8px 8px;white-space:nowrap}
+.trayfoot button{flex:none;white-space:nowrap;height:24px;min-width:24px;padding:0 7px;border-radius:7px;font:600 11px ui-monospace,Consolas,monospace;color:var(--dim);background:rgba(255,255,255,.06)}
+.trayfoot button:hover{background:rgba(255,255,255,.12);color:var(--cream)}
+.trayfoot button.on{background:rgba(255,255,255,.16);color:var(--cream)}
+.trayfoot .zv{min-width:34px;text-align:center;font:11px ui-monospace,Consolas,monospace;color:var(--faint)}
+.trayfoot .sp{flex:1}
+.trayedge{position:absolute;top:0;bottom:0;right:-5px;width:10px;cursor:ew-resize;z-index:6;touch-action:none}
+.trayedge::after{content:"";position:absolute;top:50%;left:3px;width:4px;height:36px;margin-top:-18px;border-radius:2px;background:rgba(255,255,255,.12);opacity:0;transition:opacity .15s}
+.tray:hover .trayedge::after,.trayedge.drag::after{opacity:1}
+.tray.min{width:34px}
+.tray.min .railhead,.tray.min .trayedge,.tray.min .trayfoot>:not(.tmin){display:none}
+.tray.min .traybody{margin:8px 4px 0}
+.tray.min .trayfoot{justify-content:center;padding:6px 0 8px}
+.leaders{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:hidden}
+.railsvg .vp{fill:rgba(60,45,30,.08);stroke:rgba(60,45,30,.35);stroke-width:1}
+.tray{--trayw:116px}
+.trayfoot button span{display:none}
+.trayfoot .zv,.trayfoot .sp{display:none}
+.trayfoot{flex-wrap:wrap;justify-content:center;gap:4px;padding:6px 4px 8px}
+.trayfoot button{height:28px;min-width:30px;padding:0 6px}
+.traybody .rcard{position:fixed;z-index:8;left:12px;right:12px;top:auto !important;bottom:calc(var(--sb) + 56px);zoom:1}
 /* ---- story rail ---- */
 .stage{position:relative;display:flex;justify-content:center;align-items:stretch;width:100%;--railw:0px}
 .stage.railon{--railw:96px}
@@ -254,7 +286,7 @@ body[data-mode="r"]{--mc:#e5534b} body[data-mode="y"]{--mc:#f2c230} body[data-mo
 .rcard{position:absolute;z-index:5;left:8px;right:8px;padding:9px;border-radius:10px;background:#2b2621;color:var(--cream);box-shadow:0 10px 26px -8px rgba(0,0,0,.6);animation:drop2 .2s var(--ease)}
 .rcard input{width:100%;padding:6px 8px;margin-bottom:6px;border:0;outline:none;border-radius:7px;background:rgba(255,255,255,.1);color:var(--cream);font:inherit;font-size:12.5px;user-select:text;-webkit-user-select:text}
 .rcard .row2b{display:flex;gap:4px;align-items:center}
-.rcard .row2b button{padding:4px 8px;border-radius:7px;font-size:11.5px;color:var(--dim);background:rgba(255,255,255,.06)}
+.rcard .row2b button{white-space:nowrap;padding:4px 8px;border-radius:7px;font-size:11.5px;color:var(--dim);background:rgba(255,255,255,.06)}
 .rcard .row2b button.del{margin-left:auto;color:#ff9a8a;background:transparent}
 .rcard .val{font:11px ui-monospace,Consolas,monospace;color:var(--faint)}
 .doc span[class*=" pn-"]{position:relative}
@@ -335,6 +367,13 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   </div>
   <div class="tally" id="tally"><i class="tr"></i><i class="ty"></i><i class="tg"></i></div>
 </header>
+<div class="work" id="work">
+<aside class="tray" id="tray" hidden>
+  <div class="railhead" id="trayhead"></div>
+  <div class="traybody" id="traybody"><div id="traygraph"></div><div id="traycard"></div></div>
+  <div class="trayfoot" id="trayfoot"></div>
+  <div class="trayedge" id="trayedge" title="Drag to resize"></div>
+</aside>
 <main class="desk" id="desk">
   <div class="darechip" id="dare" hidden></div>
   <div class="stage" id="stage"><div class="rail" id="rail"><div class="railbox" id="railbox"></div></div>
@@ -344,6 +383,8 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   </div>
   </div>
 </main>
+<svg class="leaders" id="leaders"></svg>
+</div>
 <footer class="foot"><button class="fb" id="bDare" title="Roll a dare"><svg viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="3"/><circle cx="7" cy="7" r=".9" fill="currentColor"/><circle cx="13" cy="13" r=".9" fill="currentColor"/><circle cx="10" cy="10" r=".9" fill="currentColor"/></svg></button><button class="fb" id="bBeats" title="Story curve" aria-pressed="false"><svg viewBox="0 0 20 20"><path d="M2 12c2.5 0 3-6 5.5-6S10 14 12.5 14 15 8 18 8"/></svg></button><span class="pg" id="pageinfo"></span><span id="counts"></span></footer>
 </div>
 
@@ -1714,102 +1755,61 @@ function removeBeat(id) {
   delete beats[id]; if (beatSel === id) beatSel = null;
   clean(); changed(); renderRail();
 }
-function railGeom() {
-  const page = $('page'), z = zoomEff(), pr = page.getBoundingClientRect();
-  return { top: page.offsetTop, H: page.offsetHeight, W: $('rail').offsetWidth, z, pr, padL: parseFloat(getComputedStyle(page).paddingLeft) || 0 };
+function trayCfg() {
+  const t = settings.tray = Object.assign({ w: 116, z: 1, mode: 'follow', min: false }, settings.tray || {});
+  t.w = Math.max(80, Math.min(240, +t.w || 116)); t.z = Math.max(0.7, Math.min(1.8, +t.z || 1));
+  return t;
 }
-function renderRailSoon() { if (beatsOn && !railQ) railQ = requestAnimationFrame(() => { railQ = 0; const a = document.activeElement; if (a && (a.id === 'rTitle' || a.id === 'rVar')) return; renderRail(); }); }
-function renderRail() {
-  if (!beatsOn) return;
-  const placed = normPins(), g = railGeom(), box = $('railbox');
-  box.style.top = g.top + 'px'; box.style.height = g.H + 'px';
-  const W = g.W, H = g.H, pad = W > 150 ? 22 : 12, X = v => pad + v * (W - pad * 2);
-  // where each pin sits, in page units
-  const pts = [];
-  for (const id of placed) {
-    const sp = pinSpan(id); if (!sp) continue;
-    const r = sp.getClientRects()[0] || sp.getBoundingClientRect();
-    pts.push({ id, y: (r.top - g.pr.top) / g.z + (r.height / g.z) * 0.5, px: (r.left - g.pr.left) / g.z });
-  }
-  pts.sort((a, b) => a.y - b.y);
-  const curve = (vid) => {
-    if (!pts.length) return '';
-    const P = [[X(valOf(pts[0].id, vid)), 0], ...pts.map(q => [X(valOf(q.id, vid)), q.y]), [X(valOf(pts[pts.length - 1].id, vid)), H]];
-    let d = `M${P[0][0]},${P[0][1]}`;
-    for (let i = 0; i < P.length - 1; i++) {
-      const p1 = P[i], p2 = P[i + 1], h = (p2[1] - p1[1]) * 0.5;
-      d += ` C${p1[0]},${p1[1] + h} ${p2[0]},${p2[1] - h} ${p2[0]},${p2[1]}`;
-    }
-    return d;
-  };
-  const av = varOf(), col = av.color;
-  let svg = `<svg class="railsvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
-  // axis ticks
-  for (const [f, lab] of [[0, 'low'], [0.5, 'mid'], [1, 'high']]) svg += `<line x1="${X(f)}" x2="${X(f)}" y1="0" y2="${H}" stroke="rgba(60,45,30,${f === 0.5 ? .12 : .2})" stroke-dasharray="${f === 0.5 ? '2 5' : '0'}"/>` + (W > 150 ? `<text class="tick" x="${X(f)}" y="${H - 10}" text-anchor="middle">${lab}</text>` : '');
-  if (W > 150) svg += `<text class="tick" x="9" y="${Math.min(H - 30, 150)}" transform="rotate(90 9 ${Math.min(H - 30, 150)})">time →</text>`;
-  // other variables, faint
-  for (const v of beatVars) if (v.id !== av.id) { const d = curve(v.id); if (d) svg += `<path d="${d}" fill="none" stroke="${v.color}" stroke-width="1.5" stroke-dasharray="4 4" opacity=".45"/>`; }
-  const d = curve(av.id);
-  if (d) svg += `<path d="${d} L${pad},${H} L${pad},0 Z" fill="${col}" opacity=".08"/><path d="${d}" fill="none" stroke="${col}" stroke-width="2.6" stroke-linecap="round"/>`;
-  // caret marker
-  const cs = getSelection();
-  if (cs.rangeCount && ed.contains(cs.focusNode)) {
-    const cr = cs.getRangeAt(0).getBoundingClientRect();
-    if (cr.height) { const cy = (cr.top - g.pr.top) / g.z + cr.height / g.z / 2; svg += `<line x1="0" x2="${W}" y1="${cy}" y2="${cy}" stroke="${COLHEX[mode]}" stroke-width="1.5" stroke-dasharray="2 3" opacity=".9"/>`; }
-  }
-  // leaders + points
-  pts.forEach((q, i) => {
-    const x = X(valOf(q.id)), sel = q.id === beatSel;
-    const toX = sel ? W + q.px - 3 : W + Math.min(q.px, g.padL) - 6;
-    svg += `<path d="M${x},${q.y} L${W},${q.y} L${toX},${q.y}" fill="none" stroke="${col}" stroke-width="${sel ? 1.6 : 1}" ${sel ? '' : 'stroke-dasharray="3 3"'} opacity="${sel ? .95 : .6}"/>`;
+let trayGQ = 0;
+function trayGraphSoon() { if (beatsOn && !trayGQ) trayGQ = requestAnimationFrame(() => { trayGQ = 0; renderTrayGraph(); }); }
+function renderRailSoon() {
+  if (!beatsOn || railQ) return;
+  railQ = requestAnimationFrame(() => {
+    railQ = 0; const a = document.activeElement;
+    if (railDrag || (a && (a.id === 'rTitle' || a.id === 'rVar'))) renderTrayGraph(); else renderRail();
   });
-  pts.forEach((q, i) => {
-    const x = X(valOf(q.id)), sel = q.id === beatSel, t = (beats[q.id].t || '').trim() || 'beat ' + (i + 1);
-    const lab = t.length > 22 ? t.slice(0, 21) + '…' : t, right = x < W / 2;
-    svg += `<g class="rp${sel ? ' sel' : ''}" data-id="${q.id}"><circle class="hit" cx="${x}" cy="${q.y}" r="15"/><circle class="pt" cx="${x}" cy="${q.y}" r="${sel ? 7.5 : 6}" fill="${col}"/>` +
-      (railDrag === q.id ? `<text class="rval" x="${right ? x + 11 : x - 11}" y="${q.y + 18}" text-anchor="${right ? 'start' : 'end'}">${escH(av.name)} ${Math.round(valOf(q.id) * 100)}</text>` : '') +
-      (W > 150 || sel ? `<text class="rlab" x="${right ? x + 11 : x - 11}" y="${q.y - 9}" text-anchor="${right ? 'start' : 'end'}">${escH(lab)}</text>` : '') + '</g>';
-  });
-  svg += '</svg>';
-  const pinCss = () => {
-    document.documentElement.style.setProperty('--pinc', col);
-    let st = $('pinStyle'); if (!st) { st = document.createElement('style'); st.id = 'pinStyle'; document.head.appendChild(st); }
-    st.textContent = beatSel ? `.doc span.pn-${beatSel}::after{scale:1.45;box-shadow:0 0 0 2px var(--paper),0 0 10px ${col}}` : '';
-  };
-  // mid-drag: only the graph changes; header and card stay put (and the card hides)
-  const oldSvg = box.querySelector('.railsvg');
-  if (railDrag && oldSvg) {
-    oldSvg.outerHTML = svg;
-    const c = box.querySelector('.rcard'); if (c) c.classList.add('away');
-    railCardFor = null; pinCss(); return;
-  }
-  // header
+}
+function renderRail() { if (!beatsOn) return; renderTrayHead(); renderTrayGraph(); }
+function applyTray() {
+  const t = trayCfg(), tr = $('tray');
+  tr.classList.toggle('min', !!t.min); tr.classList.toggle('whole', t.mode === 'whole' || !!t.min);
+  tr.style.setProperty('--trayw', t.w + 'px'); tr.style.setProperty('--tz', t.z);
+}
+function renderTrayHead() {
+  const t = trayCfg(); applyTray();
+  const placed = normPins(), av = varOf(), wide = t.w > 150;
   const loose = Object.keys(beats).filter(id => !placed.has(id));
-  let head = '<div class="railhead"><div class="tabs">';
+  let head = '<div class="tabs">';
   for (const v of beatVars) {
     if (railEditVar === v.id) head += `<input id="rVar" maxlength="24" value="${escH(v.name)}">`;
-    else head += `<button class="tab${v.id === av.id ? ' on' : ''}" data-v="${v.id}" title="Double-click to rename"><i style="background:${v.color}"></i><span>${escH(v.name)}</span></button>`;
+    else head += `<button class="tab${v.id === av.id ? ' on' : ''}" data-v="${v.id}" title="${escH(v.name)} (double-click to rename)"><i style="background:${v.color}"></i><span>${escH(v.name)}</span></button>`;
   }
   head += `<button class="tab add" id="rAddVar" title="Track another variable">+</button><span class="fill"></span>`;
-  head += `<button class="pinb" id="rPin" title="Pin a beat where your cursor is">📍${W > 150 ? ' Pin' : ''}</button></div>`;
+  head += `<button class="pinb" id="rPin" title="Pin a beat where your cursor is">📍${wide ? ' Pin' : ''}</button></div>`;
   if (loose.length) head += `<div class="loose" title="Beats whose text was deleted. Click to pin at the cursor.">` + loose.map(id => `<button data-loose="${id}">⊕ ${escH((beats[id].t || 'beat').slice(0, 14))}</button>`).join('') + '</div>';
-  head += '</div>';
-  // selected beat card
-  let card = '';
-  const sp = beatSel && pts.find(q => q.id === beatSel);
-  if (sp) card = `<div class="rcard${railCardFor === beatSel ? ' still' : ''}" style="top:${Math.min(H - 120, sp.y + 16)}px"><input id="rTitle" maxlength="60" placeholder="Name this beat" value="${escH(beats[beatSel].t || '')}"><div class="row2b"><span class="val">${escH(av.name)} ${Math.round(valOf(beatSel) * 100)}</span><button id="rMove" title="Move this pin to the cursor">Re-pin</button><button class="del" id="rDel">Remove</button></div></div>`;
-  railCardFor = sp ? beatSel : null;
-  box.innerHTML = head + svg + card;
-  for (const b of box.querySelectorAll('button')) b.addEventListener('mousedown', e => e.preventDefault());
+  $('trayhead').innerHTML = head;
+  const whole = t.mode === 'whole';
+  $('trayfoot').innerHTML =
+    `<button id="tFollow" class="${whole ? '' : 'on'}" title="Line up with the text as you scroll">⇅<span> follow</span></button>` +
+    `<button id="tWhole" class="${whole ? 'on' : ''}" title="Fit the whole story in the tray">▥<span> whole</span></button><span class="sp"></span>` +
+    `<button id="tZo" title="Smaller (Ctrl+scroll on the tray)">−</button><span class="zv">${Math.round(t.z * 100)}%</span><button id="tZi" title="Bigger (Ctrl+scroll on the tray)">+</button>` +
+    `<button class="tmin" id="tMin" title="${t.min ? 'Open the tray' : 'Minimize the tray'}">${t.min ? '»' : '«'}</button>`;
+  // card for the selected beat
+  const card = $('traycard');
+  if (beatSel && placed.has(beatSel) && !t.min) {
+    card.innerHTML = `<div class="rcard${railCardFor === beatSel ? ' still' : ''}"><input id="rTitle" maxlength="60" placeholder="Name this beat" value="${escH(beats[beatSel].t || '')}"><div class="row2b"><span class="val" id="rVal"></span><button id="rMove" title="Move this pin to the cursor">Re-pin</button><button class="del" id="rDel">Remove</button></div></div>`;
+    railCardFor = beatSel;
+  } else { card.innerHTML = ''; railCardFor = null; }
+  for (const b of $('tray').querySelectorAll('button')) b.addEventListener('mousedown', e => e.preventDefault());
   $('rPin').onclick = () => pinBeat();
   $('rAddVar').onclick = () => {
     const v = { id: 'v' + Math.random().toString(36).slice(2, 6), name: 'variable ' + (beatVars.length + 1), color: VARCOL[beatVars.length % VARCOL.length] };
     beatVars.push(v); activeVar = v.id; railEditVar = v.id; changed(); renderRail();
     setTimeout(() => { const i = $('rVar'); if (i) { i.focus(); i.select(); } }, 30);
   };
-  for (const t of box.querySelectorAll('.tab[data-v]')) {
-    t.onclick = () => { activeVar = t.dataset.v; renderRail(); blip('n', true); };
-    t.ondblclick = () => { railEditVar = t.dataset.v; renderRail(); setTimeout(() => { const i = $('rVar'); if (i) { i.focus(); i.select(); } }, 30); };
+  for (const tb of $('trayhead').querySelectorAll('.tab[data-v]')) {
+    tb.onclick = () => { activeVar = tb.dataset.v; renderRail(); blip('n', true); };
+    tb.ondblclick = () => { railEditVar = tb.dataset.v; renderRail(); setTimeout(() => { const i = $('rVar'); if (i) { i.focus(); i.select(); } }, 30); };
   }
   const vi = $('rVar');
   if (vi) {
@@ -1823,54 +1823,168 @@ function renderRail() {
     vi.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); done(true); } if (e.key === 'Escape') { e.preventDefault(); railEditVar = null; renderRail(); } });
     vi.addEventListener('blur', () => { if (railEditVar) done(true); });
   }
-  for (const b of box.querySelectorAll('[data-loose]')) b.onclick = () => { pushUndo('style', true); if (pinAtCaret(b.dataset.loose)) { beatSel = b.dataset.loose; changed(); renderRail(); } };
-  if (sp) {
-    const ti = $('rTitle');
+  for (const b of $('trayhead').querySelectorAll('[data-loose]')) b.onclick = () => { pushUndo('style', true); if (pinAtCaret(b.dataset.loose)) { beatSel = b.dataset.loose; changed(); renderRail(); } };
+  const setT = (k, v) => { trayCfg()[k] = v; saveSettings(); applyTray(); applyZoom(); if (pagesOn) schedulePages(); renderRail(); };
+  $('tFollow').onclick = () => setT('mode', 'follow');
+  $('tWhole').onclick = () => setT('mode', 'whole');
+  $('tZo').onclick = () => setT('z', Math.round((trayCfg().z - 0.1) * 10) / 10);
+  $('tZi').onclick = () => setT('z', Math.round((trayCfg().z + 0.1) * 10) / 10);
+  $('tMin').onclick = () => setT('min', !trayCfg().min);
+  const ti = $('rTitle');
+  if (ti) {
     ti.addEventListener('input', () => { beats[beatSel].t = ti.value; changed(); });
     ti.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); ti.blur(); ed.focus(); } });
     ti.addEventListener('blur', () => setTimeout(renderRailSoon, 0));
     $('rDel').onclick = () => removeBeat(beatSel);
     $('rMove').onclick = () => { pushUndo('style', true); if (pinAtCaret(beatSel)) { changed(); renderRail(); } };
   }
+}
+// screen-space geometry: works at any page zoom
+function renderTrayGraph() {
+  if (!beatsOn) return;
+  const t = trayCfg(), body = $('traybody'), br = body.getBoundingClientRect(), W = body.clientWidth, H = body.clientHeight;
+  if (!W || !H) return;
+  const page = $('page'), pr = page.getBoundingClientRect(), z = zoomEff(), whole = t.mode === 'whole' || t.min, mini = !!t.min, tz = mini ? 1 : t.z;
+  const padL = (parseFloat(getComputedStyle(page).paddingLeft) || 0) * z;
+  const pad = mini ? 6 : Math.max(12, Math.min(26, W * 0.09)), X = v => pad + v * (W - pad * 2);
+  const ytop = 8, ybot = H - 8, Yd = sy => whole ? ytop + ((sy - pr.top) / (pr.height || 1)) * (ybot - ytop) : sy - br.top;
+  const placed = normPins(), pts = [];
+  for (const id of placed) {
+    const sp = pinSpan(id); if (!sp) continue;
+    const r = sp.getClientRects()[0] || sp.getBoundingClientRect();
+    pts.push({ id, y: Yd(r.top + r.height / 2), sy: r.top + r.height / 2, sx: r.left });
+  }
+  pts.sort((a, b) => a.y - b.y);
+  const docTop = Yd(pr.top), docBot = Yd(pr.bottom);
+  const curve = vid => {
+    if (!pts.length) return '';
+    const P = [[X(valOf(pts[0].id, vid)), docTop], ...pts.map(q => [X(valOf(q.id, vid)), q.y]), [X(valOf(pts[pts.length - 1].id, vid)), docBot]];
+    let d = `M${P[0][0]},${P[0][1]}`;
+    for (let i = 0; i < P.length - 1; i++) { const a = P[i], b = P[i + 1], h = (b[1] - a[1]) * 0.5; d += ` C${a[0]},${a[1] + h} ${b[0]},${b[1] - h} ${b[0]},${b[1]}`; }
+    return d;
+  };
+  const av = varOf(), col = av.color, fs = 10.5 * tz;
+  let svg = `<svg class="railsvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="pointer-events:none">`;
+  if (whole) {
+    const dr = $('desk').getBoundingClientRect(), a = Math.max(ytop, Yd(dr.top)), b = Math.min(ybot, Yd(dr.bottom));
+    if (b > a) svg += `<rect class="vp" x="1.5" y="${a}" width="${W - 3}" height="${b - a}" rx="3"/>`;
+    body.style.backgroundPositionY = '0px';
+  } else body.style.backgroundPositionY = ((docTop % 24) + 24) % 24 + 'px';
+  if (!mini) for (const [f, lab] of [[0, 'low'], [0.5, 'mid'], [1, 'high']]) svg += `<line x1="${X(f)}" x2="${X(f)}" y1="0" y2="${H}" stroke="rgba(60,45,30,${f === 0.5 ? .12 : .2})" stroke-dasharray="${f === 0.5 ? '2 5' : '0'}"/>` + (W > 130 ? `<text class="tick" x="${X(f)}" y="${H - 8}" text-anchor="middle" style="font-size:${9.5 * tz}px">${lab}</text>` : '');
+  for (const v of beatVars) if (v.id !== av.id) { const d = curve(v.id); if (d) svg += `<path d="${d}" fill="none" stroke="${v.color}" stroke-width="1.5" stroke-dasharray="4 4" opacity=".45"/>`; }
+  const d = curve(av.id);
+  if (d) svg += `<path d="${d} L${pad},${docBot} L${pad},${docTop} Z" fill="${col}" opacity=".08"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${mini ? 2 : 2.6 * Math.sqrt(tz)}" stroke-linecap="round"/>`;
+  // caret line
+  const cs = getSelection(); let caretY = null;
+  if (cs.rangeCount && ed.contains(cs.focusNode)) { const cr = cs.getRangeAt(0).getBoundingClientRect(); if (cr.height) { caretY = cr.top + cr.height / 2; const cy = Yd(caretY); svg += `<line x1="0" x2="${W}" y1="${cy}" y2="${cy}" stroke="${COLHEX[mode]}" stroke-width="1.5" stroke-dasharray="2 3" opacity=".9"/>`; } }
+  // points
+  pts.forEach((q, i) => {
+    const x = X(valOf(q.id)), sel = q.id === beatSel;
+    if (!whole) svg += `<path d="M${x},${q.y} L${W},${q.y}" fill="none" stroke="${col}" stroke-width="${sel ? 1.6 : 1}" ${sel ? '' : 'stroke-dasharray="3 3"'} opacity="${sel ? .95 : .6}"/>`;
+  });
+  pts.forEach((q, i) => {
+    const x = X(valOf(q.id)), sel = q.id === beatSel, tt = (beats[q.id].t || '').trim() || 'beat ' + (i + 1);
+    const lab = tt.length > 22 ? tt.slice(0, 21) + '…' : tt, right = x < W / 2, rr = (mini ? 3.5 : (sel ? 7.5 : 6)) * (mini ? 1 : tz), off = rr + 5;
+    svg += `<g class="rp${sel ? ' sel' : ''}" data-id="${q.id}" style="pointer-events:all"><circle class="hit" cx="${x}" cy="${q.y}" r="${Math.max(13, rr + 7)}"/><circle class="pt" cx="${x}" cy="${q.y}" r="${rr}" fill="${col}"${mini ? ' style="stroke-width:1.5"' : ''}/>` +
+      (railDrag === q.id && !mini ? `<text class="rval" style="font-size:${10 * tz}px" x="${right ? x + off : x - off}" y="${q.y + fs + 6}" text-anchor="${right ? 'start' : 'end'}">${escH(av.name)} ${Math.round(valOf(q.id) * 100)}</text>` : '') +
+      (!mini && (W > 130 || sel) ? `<text class="rlab" style="font-size:${fs}px" x="${right ? x + off : x - off}" y="${q.y - off + 2}" text-anchor="${right ? 'start' : 'end'}">${escH(lab)}</text>` : '') + '</g>';
+  });
+  svg += '</svg>';
+  $('traygraph').innerHTML = svg;
+  // leaders across the gap to the pins (follow mode)
+  const work = $('work').getBoundingClientRect(), dk = $('desk').getBoundingClientRect();
+  let lead = '';
+  if (!whole) {
+    const x0 = br.right - work.left;
+    for (const q of pts) {
+      if (q.sy < Math.max(br.top, dk.top) || q.sy > Math.min(br.bottom, dk.bottom)) continue;
+      const sel = q.id === beatSel, y = q.sy - work.top, x1 = (sel ? q.sx - 3 : Math.min(q.sx, pr.left + padL) - 6) - work.left;
+      lead += `<path d="M${x0},${y} L${x1},${y}" stroke="${col}" stroke-width="${sel ? 1.6 : 1}" ${sel ? '' : 'stroke-dasharray="3 3"'} opacity="${sel ? .95 : .55}" fill="none"/>`;
+    }
+  }
+  $('leaders').innerHTML = lead;
+  // card follows its point
+  const cardEl = $('traycard').firstElementChild;
+  if (cardEl) {
+    const q = pts.find(p => p.id === beatSel);
+    const vEl = $('rVal'); if (vEl) vEl.textContent = av.name + ' ' + Math.round(valOf(beatSel) * 100);
+    const ch = cardEl.offsetHeight * tz;
+    const out = !q || q.y < -4 || q.y > H + 4;
+    cardEl.classList.toggle('away', !!railDrag || out);
+    if (q) { let top = q.y + 14 * tz; if (top + ch > H - 4) top = q.y - 14 * tz - ch; cardEl.style.top = Math.max(4, top) / tz + 'px'; }
+  }
+  // pin colors follow the active variable
+  document.documentElement.style.setProperty('--pinc', col);
+  let st = $('pinStyle'); if (!st) { st = document.createElement('style'); st.id = 'pinStyle'; document.head.appendChild(st); }
+  st.textContent = beatSel ? `.doc span.pn-${beatSel}::after{scale:1.45;box-shadow:0 0 0 2px var(--paper),0 0 10px ${col}}` : '';
   // drag points: left/right = value, up/down = slide the pin through the text
-  const svgEl = box.querySelector('.railsvg');
-  for (const gq of svgEl.querySelectorAll('.rp')) {
+  for (const gq of $('traygraph').querySelectorAll('.rp')) {
     gq.addEventListener('pointerdown', e => {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       const id = gq.dataset.id, sx = e.clientX, sy = e.clientY; let moved = false;
       pinDragUndo = false; document.body.classList.add('pindrag');
       const mv = ev => {
         if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 3) moved = true;
         if (!moved) return;
-        const rect = $('railbox').querySelector('.railsvg').getBoundingClientRect();
-        const v = ((ev.clientX - rect.left) * (W / rect.width) - pad) / (W - pad * 2);
-        beats[id].v[activeVar] = Math.round(Math.max(0, Math.min(1, v)) * 100) / 100;
-        const sp = pinSpan(id);
-        if (sp) { const r = sp.getClientRects()[0]; if (r) dragPinTo(id, r.left + 2, ev.clientY); }
-        beatSel = id; railDrag = id; renderRail();
+        const b2 = $('traybody').getBoundingClientRect(), T = trayCfg(), wh = T.mode === 'whole' || T.min;
+        const v = (ev.clientX - b2.left - pad) / (W - pad * 2);
+        if (!T.min) beats[id].v[activeVar] = Math.round(Math.max(0, Math.min(1, v)) * 100) / 100;
+        const sp = pinSpan(id), r = sp && sp.getClientRects()[0];
+        if (r) {
+          let ty = ev.clientY;
+          if (wh) {
+            const p2 = $('page').getBoundingClientRect(), dk2 = $('desk').getBoundingClientRect();
+            ty = p2.top + ((ev.clientY - b2.top - 8) / (b2.height - 16)) * p2.height;
+            if (ty < dk2.top + 30 || ty > dk2.bottom - 30) { $('desk').scrollTop += ty - (dk2.top + dk2.height / 2); ty = $('page').getBoundingClientRect().top + ((ev.clientY - b2.top - 8) / (b2.height - 16)) * p2.height; }
+          }
+          dragPinTo(id, r.left + 2, ty);
+        }
+        beatSel = id; railDrag = id; renderTrayGraph();
       };
       const up = () => {
         removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
         document.body.classList.remove('pindrag');
         railDrag = null;
         if (moved) { changed(); renderRail(); return; }
-        if (beatSel === id) { beatSel = null; renderRail(); } else selectBeat(id);
+        if (beatSel === id) { beatSel = null; renderRail(); } else { const T = trayCfg(); if (T.mode === 'whole' || T.min) { const sp = pinSpan(id); if (sp) sp.scrollIntoView({ block: 'center', behavior: 'smooth' }); } selectBeat(id); }
       };
       addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
     }, { passive: false });
   }
-  // pin colors follow the active variable
-  document.documentElement.style.setProperty('--pinc', col);
-  let st = $('pinStyle'); if (!st) { st = document.createElement('style'); st.id = 'pinStyle'; document.head.appendChild(st); }
-  st.textContent = beatSel ? `.doc span.pn-${beatSel}::after{scale:1.45;box-shadow:0 0 0 2px var(--paper),0 0 10px ${col}}` : '';
 }
 function toggleBeats(on) {
   beatsOn = on === undefined ? !beatsOn : !!on;
-  $('stage').classList.toggle('railon', beatsOn); $('bBeats').setAttribute('aria-pressed', beatsOn);
+  $('tray').hidden = !beatsOn; $('bBeats').setAttribute('aria-pressed', beatsOn);
+  if (beatsOn) applyTray();
   applyZoom(); if (pagesOn) schedulePages();
   if (beatsOn) requestAnimationFrame(renderRail);
-  else { const st = $('pinStyle'); if (st) st.textContent = ''; }
+  else { const st = $('pinStyle'); if (st) st.textContent = ''; $('leaders').innerHTML = ''; }
 }
+// tray: scrolling, zoom, resize, overview navigation
+$('desk').addEventListener('scroll', () => trayGraphSoon(), { passive: true });
+$('traybody').addEventListener('wheel', e => {
+  if (e.ctrlKey) { e.preventDefault(); e.stopPropagation(); const t = trayCfg(); t.z = Math.round(Math.max(0.7, Math.min(1.8, t.z - Math.sign(e.deltaY) * 0.1)) * 10) / 10; saveSettings(); renderRail(); return; }
+  e.preventDefault(); const t = trayCfg(), pr = $('page').getBoundingClientRect(), H = $('traybody').clientHeight;
+  $('desk').scrollTop += (t.mode === 'whole' || t.min) ? e.deltaY * (pr.height / H) * 0.5 : e.deltaY;
+}, { passive: false });
+$('traybody').addEventListener('pointerdown', e => {
+  const t = trayCfg(); if (!(t.mode === 'whole' || t.min) || e.target.closest('.rcard')) return;
+  e.preventDefault();
+  const go = ev => {
+    const b = $('traybody').getBoundingClientRect(), pr = $('page').getBoundingClientRect(), dk = $('desk').getBoundingClientRect();
+    const f = Math.max(0, Math.min(1, (ev.clientY - b.top - 8) / (b.height - 16)));
+    $('desk').scrollTop += (pr.top + f * pr.height) - (dk.top + dk.height / 2);
+  };
+  go(e);
+  const up = () => { removeEventListener('pointermove', go); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+  addEventListener('pointermove', go); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+});
+$('trayedge').addEventListener('pointerdown', e => {
+  e.preventDefault(); const t = trayCfg(), sx = e.clientX, w0 = t.w, edge = $('trayedge'); edge.classList.add('drag');
+  const mv = ev => { t.w = Math.max(80, Math.min(240, w0 + ev.clientX - sx)); applyTray(); applyZoom(); renderRailSoon(); };
+  const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); edge.classList.remove('drag'); saveSettings(); if (pagesOn) schedulePages(); renderRail(); };
+  addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+});
 document.addEventListener('selectionchange', () => { if (beatsOn && document.activeElement === ed) renderRailSoon(); });
 ed.addEventListener('pointerdown', e => {
   if (e.button > 0) return;
