@@ -255,6 +255,9 @@ body[data-mode="r"]{--mc:#e5534b} body[data-mode="y"]{--mc:#f2c230} body[data-mo
 .rcard .row2b button.del{margin-left:auto;color:#ff9a8a;background:transparent}
 .rcard .val{font:11px ui-monospace,Consolas,monospace;color:var(--faint)}
 .doc span[class*=" pn-"]{position:relative}
+.doc.pinhover{cursor:grab}
+body.pindrag,body.pindrag *{cursor:grabbing !important;user-select:none !important;-webkit-user-select:none !important}
+body.pindrag .doc span[class*=" pn-"]::after{transition:none}
 .doc span[class*=" pn-"]::after{content:"";position:absolute;left:-4px;top:-.62em;width:8px;height:8px;border-radius:50% 50% 50% 0;rotate:-45deg;background:var(--pinc,#7c5cd6);box-shadow:0 0 0 1.5px var(--paper)}
 .doc span[class*=" pn-"]::before{content:"";position:absolute;left:-1px;top:-.2em;width:2px;height:1.2em;border-radius:1px;background:var(--pinc,#7c5cd6);opacity:.85}
 .stage>.page{width:min(780px,calc(100% - 16px - var(--railw)))}
@@ -1627,18 +1630,71 @@ function normPins() {
 function pinSpan(id) { return ed.querySelector('span.pn-' + id); }
 function valOf(id, vid) { const v = beats[id] && beats[id].v[vid || activeVar]; return typeof v === 'number' ? v : 0.5; }
 function varOf(vid) { return beatVars.find(v => v.id === (vid || activeVar)) || beatVars[0]; }
+function pinPos(id) {
+  const sp = pinSpan(id); if (!sp) return null;
+  const r = document.createRange(); r.setStart(sp, 0);
+  const w = document.createTreeWalker(sp, NodeFilter.SHOW_TEXT), t = w.nextNode();
+  return t ? posOf(t, 0) : null;
+}
+// put pin `id` before character pos.o of paragraph pos.p; false if impossible or occupied
+function pinAt(id, pos) {
+  const ps = paras(), p = ps[pos.p]; if (!p) return false;
+  const len = textOf(p).length; if (!len) return false;
+  const o = Math.max(0, Math.min(pos.o, len - 1));
+  const [L, R] = splitRuns(pToRuns(p), o), mid = L.length && L[L.length - 1].pn === R[0].pn;
+  if (R[0].pn === id && !mid) return true;
+  if (R[0].pn && beats[R[0].pn] && !mid) return false;
+  const keep = document.activeElement === ed ? getSel() : null;
+  const old = pinSpan(id); if (old) { old.classList.remove('pn-' + id); clean(); }
+  const [L2, R2] = splitRuns(pToRuns(paras()[pos.p]), o);
+  R2[0] = { ...R2[0], pn: id };
+  render(paras()[pos.p], concatRuns(L2, R2));
+  if (keep) setSel(keep);
+  return true;
+}
 function pinAtCaret(id) {
   const s = getSel(); if (!s) { toast('Click into your text where the beat happens'); return false; }
-  const p = paras()[s.f.p], len = textOf(p).length;
-  if (!len) { toast('Put the cursor in some text first'); return false; }
-  const o = s.f.o < len ? s.f.o : len - 1, runs = pToRuns(p);
-  const [L, R] = splitRuns(runs, o);
-  if (R[0].pn && beats[R[0].pn] && R[0].pn !== id) { beatSel = R[0].pn; renderRail(); return false; }
-  const old = id && pinSpan(id); if (old) { old.classList.remove('pn-' + id); clean(); }
-  const [L2, R2] = splitRuns(pToRuns(paras()[s.f.p]), o);
-  R2[0] = { ...R2[0], pn: id };
-  render(paras()[s.f.p], concatRuns(L2, R2)); setSel(s);
-  return true;
+  const p = paras()[s.f.p];
+  if (!textOf(p).length) { toast('Put the cursor in some text first'); return false; }
+  const o = Math.min(s.f.o, textOf(p).length - 1), [L, R] = splitRuns(pToRuns(p), o);
+  if (R[0].pn && beats[R[0].pn] && R[0].pn !== id && !(L.length && L[L.length - 1].pn === R[0].pn)) { beatSel = R[0].pn; renderRail(); return false; }
+  return pinAt(id, { p: s.f.p, o });
+}
+// text position under a screen point (null if not in the text)
+function posAtPoint(x, y) {
+  let n, o;
+  if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); if (!r) return null; n = r.startContainer; o = r.startOffset; }
+  else if (document.caretPositionFromPoint) { const c = document.caretPositionFromPoint(x, y); if (!c) return null; n = c.offsetNode; o = c.offset; }
+  else return null;
+  if (!ed.contains(n) || n === ed) return null;
+  const q = posOf(n, o);
+  return q && q.p >= 0 ? q : null;
+}
+// live-drag a pin to wherever (x,y) lands in the text
+let pinDragUndo = false;
+function dragPinTo(id, x, y) {
+  const q = posAtPoint(x, y); if (!q) return false;
+  const cur = pinPos(id); if (cur && cur.p === q.p && cur.o === q.o) return false;
+  if (!pinDragUndo) { pushUndo('style', true); pinDragUndo = true; }
+  return pinAt(id, q);
+}
+function selectBeat(id) {
+  beatSel = id;
+  const q = pinPos(id); if (q && document.activeElement === ed) setSel(at(q.p, q.o));
+  renderRail(); blip('n', true);
+}
+// grab the pin head inside the page
+function pinUnder(x, y) {
+  const z = zoomEff(), tol = (matchMedia('(pointer:coarse)').matches ? 18 : 9);
+  let best = null, bd = 1e9;
+  for (const sp of ed.querySelectorAll('span[class*=" pn-"]')) {
+    const m = /(?:^| )pn-([a-z0-9]+)/.exec(sp.className); if (!m || !beats[m[1]]) continue;
+    const r = sp.getClientRects()[0]; if (!r) continue;
+    const hx = r.left, hy = r.top - r.height * 0.25;
+    const dx = Math.abs(x - hx), dy = y - hy;
+    if (dx < tol && dy > -tol - 8 * z && dy < r.height * 0.55) { const d = dx + Math.abs(dy) * 0.5; if (d < bd) { bd = d; best = { id: m[1], r }; } }
+  }
+  return best;
 }
 function pinBeat() {
   if (!beatsOn) toggleBeats(true);
@@ -1759,29 +1815,30 @@ function renderRail() {
     $('rDel').onclick = () => removeBeat(beatSel);
     $('rMove').onclick = () => { pushUndo('style', true); if (pinAtCaret(beatSel)) { changed(); renderRail(); } };
   }
-  // drag points left/right
+  // drag points: left/right = value, up/down = slide the pin through the text
   const svgEl = box.querySelector('.railsvg');
   for (const gq of svgEl.querySelectorAll('.rp')) {
     gq.addEventListener('pointerdown', e => {
       e.preventDefault();
-      const id = gq.dataset.id, rect = svgEl.getBoundingClientRect(), sx = e.clientX; let moved = false;
-      gq.setPointerCapture(e.pointerId);
+      const id = gq.dataset.id, sx = e.clientX, sy = e.clientY; let moved = false;
+      pinDragUndo = false; document.body.classList.add('pindrag');
       const mv = ev => {
-        if (Math.abs(ev.clientX - sx) > 3) moved = true;
+        if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 3) moved = true;
         if (!moved) return;
+        const rect = $('railbox').querySelector('.railsvg').getBoundingClientRect();
         const v = ((ev.clientX - rect.left) * (W / rect.width) - pad) / (W - pad * 2);
         beats[id].v[activeVar] = Math.round(Math.max(0, Math.min(1, v)) * 100) / 100;
-        renderRail();
+        const sp = pinSpan(id);
+        if (sp) { const r = sp.getClientRects()[0]; if (r) dragPinTo(id, r.left + 2, ev.clientY); }
+        beatSel = id; renderRail();
       };
       const up = () => {
-        gq.removeEventListener('pointermove', mv); gq.removeEventListener('pointerup', up); gq.removeEventListener('pointercancel', up);
+        removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+        document.body.classList.remove('pindrag');
         if (moved) { changed(); return; }
-        beatSel = beatSel === id ? null : id;
-        const pin = pinSpan(id);
-        if (pin && beatSel) { const pi = paras().indexOf(pin.closest('p')); ed.focus(); const before = [...pin.parentNode.children].slice(0, [...pin.parentNode.children].indexOf(pin)).filter(x => !isBrk(x)).reduce((a, x) => a + x.textContent.length, 0); setSel(at(pi, before)); }
-        renderRail(); blip('n', true);
+        if (beatSel === id) { beatSel = null; renderRail(); } else selectBeat(id);
       };
-      gq.addEventListener('pointermove', mv); gq.addEventListener('pointerup', up); gq.addEventListener('pointercancel', up);
+      addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
     }, { passive: false });
   }
   // pin colors follow the active variable
@@ -1797,6 +1854,31 @@ function toggleBeats(on) {
   else { const st = $('pinStyle'); if (st) st.textContent = ''; }
 }
 document.addEventListener('selectionchange', () => { if (beatsOn && document.activeElement === ed) renderRailSoon(); });
+ed.addEventListener('pointerdown', e => {
+  if (e.button > 0) return;
+  const h = pinUnder(e.clientX, e.clientY); if (!h) return;
+  e.preventDefault(); e.stopPropagation();
+  const id = h.id, sx = e.clientX, sy = e.clientY, oy = (h.r.top + h.r.height / 2) - e.clientY, ox = h.r.left + 2 - e.clientX; let moved = false;
+  pinDragUndo = false; document.body.classList.add('pindrag');
+  const mv = ev => {
+    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 3) moved = true;
+    if (!moved) return;
+    ev.preventDefault();
+    if (dragPinTo(id, ev.clientX + ox, ev.clientY + oy) || beatSel !== id) { beatSel = id; renderRailSoon(); }
+  };
+  const up = () => {
+    removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+    document.body.classList.remove('pindrag');
+    if (moved) { changed(); renderRail(); return; }
+    if (!beatsOn) toggleBeats(true);
+    selectBeat(id);
+  };
+  addEventListener('pointermove', mv, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+}, true);
+ed.addEventListener('touchstart', e => { const t = e.touches[0]; if (t && pinUnder(t.clientX, t.clientY)) e.preventDefault(); }, { passive: false, capture: true });
+ed.addEventListener('mousedown', e => { if (pinUnder(e.clientX, e.clientY)) e.preventDefault(); }, true);
+let pinHoverQ = 0;
+ed.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || pinHoverQ) return; pinHoverQ = requestAnimationFrame(() => { pinHoverQ = 0; ed.classList.toggle('pinhover', !!pinUnder(e.clientX, e.clientY)); }); });
 addEventListener('resize', () => renderRailSoon());
 
 /* ---------- wiring ---------- */
