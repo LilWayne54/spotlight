@@ -120,10 +120,11 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .stepper button:active{background:rgba(255,255,255,.12)}
 .stepper span{min-width:44px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
 .meaning{display:flex;align-items:center;gap:10px;margin:0 0 8px}
-.meaning i{flex:none;width:14px;height:14px;border-radius:50%}
-.meaning input{flex:1;min-width:0;padding:8px 10px;border:0;outline:none;border-radius:9px;background:rgba(255,255,255,.08);color:var(--cream);user-select:text;-webkit-user-select:text}
-.meaning input::placeholder{color:var(--faint)}
-.meaning input:focus{background:rgba(255,255,255,.13)}
+.meaning{align-items:flex-start}
+.meaning i{flex:none;width:14px;height:14px;border-radius:50%;margin-top:10px}
+.meaning textarea{resize:none;overflow:hidden;font:inherit;line-height:1.35;field-sizing:content;flex:1;min-width:0;padding:8px 10px;border:0;outline:none;border-radius:9px;background:rgba(255,255,255,.08);color:var(--cream);user-select:text;-webkit-user-select:text}
+.meaning textarea::placeholder{color:var(--faint)}
+.meaning textarea:focus{background:rgba(255,255,255,.13)}
 .linkbtn{font-size:12px;color:var(--dim);padding:4px 8px;border-radius:8px}
 .linkbtn:hover{background:rgba(255,255,255,.08);color:var(--cream)}
 .toggle{width:46px;height:28px;border-radius:99px;background:rgba(255,255,255,.14);position:relative;transition:background .2s}
@@ -217,9 +218,9 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
   <div class="row"><span>Drop cap</span><button class="toggle" id="tDrop" role="switch"></button></div>
   <div class="row"><span>Clicky sounds</span><button class="toggle" id="tSound" role="switch"></button></div>
   <h4 style="margin-top:4px">Color meanings</h4>
-  <div class="meaning"><i style="background:var(--R)"></i><input id="dR" maxlength="60" placeholder="not trying · no bashing"></div>
-  <div class="meaning"><i style="background:var(--Y)"></i><input id="dY" maxlength="60" placeholder="trying · no bashing"></div>
-  <div class="meaning"><i style="background:var(--G)"></i><input id="dG" maxlength="60" placeholder="trying · bashing"></div>
+  <div class="meaning"><i style="background:var(--R)"></i><textarea id="dR" rows="1" maxlength="80" placeholder="not trying · no bashing"></textarea></div>
+  <div class="meaning"><i style="background:var(--Y)"></i><textarea id="dY" rows="1" maxlength="80" placeholder="trying · no bashing"></textarea></div>
+  <div class="meaning"><i style="background:var(--G)"></i><textarea id="dG" rows="1" maxlength="80" placeholder="trying · bashing"></textarea></div>
   <div class="row" style="justify-content:flex-end;margin-top:-2px"><button class="linkbtn" id="dReset">Reset to defaults</button></div>
 </div>
 
@@ -1070,7 +1071,7 @@ for (const [id, k] of [['bB', 'b'], ['bI', 'i'], ['bU', 'u']]) tap($(id), () => 
 tap($('bEye'), () => { settings.colors = !settings.colors; saveSettings(); applySettings(); blip('n', true); });
 tap($('bPages'), () => togglePages());
 for (const b of $('seg').children) b.onclick = () => { settings.pattern = b.dataset.p; saveSettings(); applySettings(); updateModeUI(false); blip('n', true); };
-$('bAa').onclick = () => { const open = $('pop').hidden; closeDocs(); $('pop').hidden = !open; $('veilPop').hidden = !open; $('bAa').setAttribute('aria-pressed', open); };
+$('bAa').onclick = () => { const open = $('pop').hidden; closeDocs(); $('pop').hidden = !open; $('veilPop').hidden = !open; $('bAa').setAttribute('aria-pressed', open); for (const id of ['dR', 'dY', 'dG']) grow($(id)); };
 $('veilPop').onclick = () => closePop();
 $('bDocs').onclick = () => { closePop(); openDocs(); };
 $('veilDocs').onclick = () => closeDocs();
@@ -1099,10 +1100,12 @@ $('lnUp').onclick = () => { const i = LINES.indexOf(settings.line); settings.lin
 $('zDn').onclick = () => setZoom((settings.zoom || 1) / 1.1);
 $('zUp').onclick = () => setZoom((settings.zoom || 1) * 1.1);
 for (const [id, c] of [['dR', 'r'], ['dY', 'y'], ['dG', 'g']]) {
-  $(id).addEventListener('input', e => { settings.desc = Object.assign({}, settings.desc, { [c]: e.target.value }); saveSettings(); updateModeUI(false); });
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+  $(id).addEventListener('input', e => { grow(e.target); settings.desc = Object.assign({}, settings.desc, { [c]: e.target.value }); saveSettings(); updateModeUI(false); });
 }
-$('dReset').onclick = () => { settings.desc = {}; saveSettings(); for (const id of ['dR', 'dY', 'dG']) $(id).value = ''; updateModeUI(false); };
-function fillDesc() { const d = settings.desc || {}; $('dR').value = d.r || ''; $('dY').value = d.y || ''; $('dG').value = d.g || ''; }
+$('dReset').onclick = () => { settings.desc = {}; saveSettings(); for (const id of ['dR', 'dY', 'dG']) { $(id).value = ''; grow($(id)); } updateModeUI(false); };
+function grow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+function fillDesc() { const d = settings.desc || {}; $('dR').value = d.r || ''; $('dY').value = d.y || ''; $('dG').value = d.g || ''; for (const id of ['dR', 'dY', 'dG']) requestAnimationFrame(() => grow($(id))); }
 for (const [id, k] of [['tIndent', 'indent'], ['tDrop', 'dropcap'], ['tSound', 'sound']]) $(id).onclick = () => { settings[k] = !settings[k]; saveSettings(); applySettings(); if (k === 'sound') blip('g', false); };
 
 /* pinch to zoom */
