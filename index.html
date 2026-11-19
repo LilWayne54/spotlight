@@ -232,6 +232,9 @@ body[data-mode="r"]{--mc:#e5534b} body[data-mode="y"]{--mc:#f2c230} body[data-mo
 .railsvg .rp .pt{stroke:#fbf7ee;stroke-width:2.5}
 .railsvg .rp.sel .pt{stroke:#2a241e;stroke-width:2.5}
 .railsvg .rlab{font:600 10.5px ui-monospace,"Cascadia Mono",Consolas,monospace;fill:#3a3128;paint-order:stroke;stroke:#efe8db;stroke-width:3px}
+.railsvg .rval{font:700 10px ui-monospace,Consolas,monospace;fill:var(--pinc,#7c5cd6);paint-order:stroke;stroke:#efe8db;stroke-width:3px}
+.rcard.still{animation:none}
+.rcard.away{opacity:0;pointer-events:none;transition:opacity .12s}
 .railsvg .tick{font:9.5px ui-monospace,Consolas,monospace;fill:rgba(60,45,30,.45)}
 .railhead{position:sticky;top:8px;z-index:4;margin:8px;padding:5px;border-radius:10px;background:rgba(38,33,28,.94);color:var(--cream);box-shadow:0 6px 18px -6px rgba(0,0,0,.5);font-size:12px}
 .railhead .tabs{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
@@ -1608,7 +1611,7 @@ setInterval(() => {
 
 /* ---------- story rail: pinned beats + named curves ---------- */
 const VARCOL = ['#7c5cd6', '#d9733a', '#2f98bd', '#c94f8d', '#5f9e3a', '#b8902a'];
-let beats = {}, beatVars = [], activeVar = 'v1', beatSel = null, beatsOn = false, railQ = 0, railEditVar = null;
+let beats = {}, beatVars = [], activeVar = 'v1', beatSel = null, beatsOn = false, railQ = 0, railEditVar = null, railDrag = null, railCardFor = null;
 function beatState() { return { v: 2, beats, vars: beatVars }; }
 function loadBeatState(o) {
   beats = {}; beatVars = [];
@@ -1764,9 +1767,22 @@ function renderRail() {
     const x = X(valOf(q.id)), sel = q.id === beatSel, t = (beats[q.id].t || '').trim() || 'beat ' + (i + 1);
     const lab = t.length > 22 ? t.slice(0, 21) + '…' : t, right = x < W / 2;
     svg += `<g class="rp${sel ? ' sel' : ''}" data-id="${q.id}"><circle class="hit" cx="${x}" cy="${q.y}" r="15"/><circle class="pt" cx="${x}" cy="${q.y}" r="${sel ? 7.5 : 6}" fill="${col}"/>` +
+      (railDrag === q.id ? `<text class="rval" x="${right ? x + 11 : x - 11}" y="${q.y + 18}" text-anchor="${right ? 'start' : 'end'}">${escH(av.name)} ${Math.round(valOf(q.id) * 100)}</text>` : '') +
       (W > 150 || sel ? `<text class="rlab" x="${right ? x + 11 : x - 11}" y="${q.y - 9}" text-anchor="${right ? 'start' : 'end'}">${escH(lab)}</text>` : '') + '</g>';
   });
   svg += '</svg>';
+  const pinCss = () => {
+    document.documentElement.style.setProperty('--pinc', col);
+    let st = $('pinStyle'); if (!st) { st = document.createElement('style'); st.id = 'pinStyle'; document.head.appendChild(st); }
+    st.textContent = beatSel ? `.doc span.pn-${beatSel}::after{scale:1.45;box-shadow:0 0 0 2px var(--paper),0 0 10px ${col}}` : '';
+  };
+  // mid-drag: only the graph changes; header and card stay put (and the card hides)
+  const oldSvg = box.querySelector('.railsvg');
+  if (railDrag && oldSvg) {
+    oldSvg.outerHTML = svg;
+    const c = box.querySelector('.rcard'); if (c) c.classList.add('away');
+    railCardFor = null; pinCss(); return;
+  }
   // header
   const loose = Object.keys(beats).filter(id => !placed.has(id));
   let head = '<div class="railhead"><div class="tabs">';
@@ -1781,7 +1797,8 @@ function renderRail() {
   // selected beat card
   let card = '';
   const sp = beatSel && pts.find(q => q.id === beatSel);
-  if (sp) card = `<div class="rcard" style="top:${Math.min(H - 120, sp.y + 16)}px"><input id="rTitle" maxlength="60" placeholder="Name this beat" value="${escH(beats[beatSel].t || '')}"><div class="row2b"><span class="val">${escH(av.name)} ${Math.round(valOf(beatSel) * 100)}</span><button id="rMove" title="Move this pin to the cursor">Re-pin</button><button class="del" id="rDel">Remove</button></div></div>`;
+  if (sp) card = `<div class="rcard${railCardFor === beatSel ? ' still' : ''}" style="top:${Math.min(H - 120, sp.y + 16)}px"><input id="rTitle" maxlength="60" placeholder="Name this beat" value="${escH(beats[beatSel].t || '')}"><div class="row2b"><span class="val">${escH(av.name)} ${Math.round(valOf(beatSel) * 100)}</span><button id="rMove" title="Move this pin to the cursor">Re-pin</button><button class="del" id="rDel">Remove</button></div></div>`;
+  railCardFor = sp ? beatSel : null;
   box.innerHTML = head + svg + card;
   for (const b of box.querySelectorAll('button')) b.addEventListener('mousedown', e => e.preventDefault());
   $('rPin').onclick = () => pinBeat();
@@ -1830,12 +1847,13 @@ function renderRail() {
         beats[id].v[activeVar] = Math.round(Math.max(0, Math.min(1, v)) * 100) / 100;
         const sp = pinSpan(id);
         if (sp) { const r = sp.getClientRects()[0]; if (r) dragPinTo(id, r.left + 2, ev.clientY); }
-        beatSel = id; renderRail();
+        beatSel = id; railDrag = id; renderRail();
       };
       const up = () => {
         removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
         document.body.classList.remove('pindrag');
-        if (moved) { changed(); return; }
+        railDrag = null;
+        if (moved) { changed(); renderRail(); return; }
         if (beatSel === id) { beatSel = null; renderRail(); } else selectBeat(id);
       };
       addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
@@ -1864,11 +1882,12 @@ ed.addEventListener('pointerdown', e => {
     if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 3) moved = true;
     if (!moved) return;
     ev.preventDefault();
-    if (dragPinTo(id, ev.clientX + ox, ev.clientY + oy) || beatSel !== id) { beatSel = id; renderRailSoon(); }
+    if (dragPinTo(id, ev.clientX + ox, ev.clientY + oy) || beatSel !== id) { beatSel = id; railDrag = id; renderRailSoon(); }
   };
   const up = () => {
     removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
     document.body.classList.remove('pindrag');
+    railDrag = null;
     if (moved) { changed(); renderRail(); return; }
     if (!beatsOn) toggleBeats(true);
     selectBeat(id);
