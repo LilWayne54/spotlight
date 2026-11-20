@@ -174,8 +174,9 @@ body.ruleslocked #presetRow,body.ruleslocked #rulesRow,body.ruleslocked #eRules,
 .fuse[hidden]{display:none}
 .fuse i{position:absolute;left:0;top:0;bottom:0;border-radius:0 99px 99px 0;background:var(--fc);box-shadow:0 0 10px var(--fc)}
 .fuse b{position:absolute;top:7px;translate:-50% 0;padding:2px 7px;border-radius:99px;background:#1d1915;color:var(--fc);font:800 11px/1.3 system-ui,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;box-shadow:0 2px 8px rgba(0,0,0,.4);white-space:nowrap}
-.fuse.low i{animation:fuselow .5s ease-in-out infinite alternate}
-.fuse.low b{color:#fff;background:var(--fcd)}
+.fuse.low i{opacity:.7}
+.fuse.done i{width:100% !important;opacity:0;transition:opacity 1.2s ease}
+.fuse.done b{opacity:0;transition:opacity 1.2s ease}
 @keyframes fuselow{from{opacity:1}to{opacity:.45}}
 .trow{display:flex;align-items:center;gap:9px;margin:0 0 9px;font-size:12px;color:var(--dim)}
 .trow>i{flex:none;width:14px;height:14px;border-radius:50%}
@@ -664,7 +665,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="trow" data-tc="r"><i style="background:var(--R)"></i><button class="toggle" role="switch"></button><label><input class="pnum tsec" type="number" inputmode="numeric" min="5" max="600"> seconds</label></div>
   <div class="trow" data-tc="y"><i style="background:var(--Y)"></i><button class="toggle" role="switch"></button><label><input class="pnum tsec" type="number" inputmode="numeric" min="5" max="600"> seconds</label></div>
   <div class="trow" data-tc="g"><i style="background:var(--G)"></i><button class="toggle" role="switch"></button><label><input class="pnum tsec" type="number" inputmode="numeric" min="5" max="600"> seconds</label></div>
-  <p class="ehint">When you start a sentence in a timed color, a fuse starts burning. The sentence is sealed when the time runs out or when you start the next sentence, whichever comes first. If time runs out mid-sentence you can still finish it, but you can't go back into it. Sealed sentences can't be edited, undone or retyped, only struck out.</p>
+  <p class="ehint">A gentle check-in, not a lock. When you start a sentence in a timed color, a fuse starts burning. If it runs out before you start the next sentence, you hear a soft chime: a nudge to ask whether you're still writing or just polishing. Nothing gets locked.</p>
   <h4 style="margin-top:4px">Share your setup</h4>
   <div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap"><button class="pchip" id="setupExport">Export rules &amp; colors…</button><button class="pchip" id="setupImport">Import…</button></div>
   <p class="ehint">Saves your edit rules, points, timers, presets, color meanings and custom patterns to a file you can keep, share, or open on your other device.</p>
@@ -762,7 +763,7 @@ function pToRuns(p) {
         if (tg === 'B' || tg === 'STRONG' || cl.contains('b') || /^(bold|[6-9]00)$/.test(ch.style.fontWeight)) s.b = true;
         if (tg === 'I' || tg === 'EM' || cl.contains('i') || ch.style.fontStyle === 'italic') s.i = true;
         if (tg === 'U' || cl.contains('u') || /underline/.test(ch.style.textDecoration || '')) s.u = true;
-        if (cl.contains('xs')) s.x = 's'; else if (cl.contains('xa')) s.x = 'a'; else if (cl.contains('xl')) s.x = 'l';
+        if (cl.contains('xs')) s.x = 's'; else if (cl.contains('xa')) s.x = 'a';
         walk(ch, s);
       }
     }
@@ -969,8 +970,7 @@ function snapText(h) { const d = document.createElement('div'); d.innerHTML = h;
 function flatPos(i) { const ps = paras(); for (let p = 0; p < ps.length; p++) { const L = textOf(ps[p]).length; if (i <= L) return { p, o: i }; i -= L + 1; } const l = ps.length - 1; return { p: l, o: textOf(ps[l]).length }; }
 // undo/redo count as edits: they have to pass the same edit rules and pay the same points
 function historyGate(x) {
-  if (ed.querySelector('.xl')) { const d = document.createElement('div'); d.innerHTML = x.h; if (sealedCount(d) < sealedCount(ed)) { ruleToast("Undo can't unseal a sentence."); blip('n', true); return false; } }
-  const rOn = rulesActive(), pOn = ptsActive(); if (!rOn && !pOn && !ed.querySelector('.xl')) return true;
+  const rOn = rulesActive(), pOn = ptsActive(); if (!rOn && !pOn) return true;
   const cur = paras().map(textOf).join('\n'), tgt = snapText(x.h);
   if (cur === tgt) return true;
   let i = 0; while (i < cur.length && i < tgt.length && cur[i] === tgt[i]) i++;
@@ -1174,7 +1174,7 @@ function editRange(e) {
   return [s.f, s.f];
 }
 function ruleGate(e) {
-  const rOn = rulesActive(), pOn = ptsActive(), sOn = !!ed.querySelector('.xl');
+  const rOn = rulesActive(), pOn = ptsActive(), sOn = false;
   if (!rOn && !pOn && !sOn) return false;
   const t = e.inputType || '';
   if (!(t.startsWith('insert') || t.startsWith('delete'))) return false;
@@ -1711,7 +1711,7 @@ $('setupFile').addEventListener('change', async () => {
 
 
 /* ---------- sentence timers ---------- */
-const TMR_DEF = { r: { on: false, secs: 20 }, y: { on: false, secs: 30 }, g: { on: false, secs: 60 } };
+const TMR_DEF = { r: { on: false, secs: 30 }, y: { on: false, secs: 60 }, g: { on: false, secs: 180 } };
 const tmrCfg = c => Object.assign({}, TMR_DEF[c] || { on: false, secs: 30 }, settings.timers && settings.timers[c]);
 let tmr = null, sealOpen = null;
 function sealTyping() {
@@ -1729,17 +1729,13 @@ function sealSentence(pEl, at0) {
 }
 function stopTimer(timeUp) {
   const t = tmr; if (!t) return;
-  clearInterval(t.tick); tmr = null; $('fuse').hidden = true;
-  const sel = getSel(), was = sel && { a: { ...sel.a }, f: { ...sel.f } };
-  const r = sealSentence(t.pEl, t.s);
-  if (was) setSel(clampSel(was));
-  if (!r) return;
-  if (timeUp) {
-    flashPara(paras()[r.pi]);
-    const s2 = getSel();
-    if (!r.x.done && s2 && collapsed(s2) && s2.f.p === r.pi && s2.f.o >= r.x.e - 1) sealOpen = t.pEl;
-    blip(t.c, false); toast(r.x.done ? 'Time’s up. That sentence is sealed.' : 'Time’s up. Finish the sentence, but no going back.');
-  }
+  clearInterval(t.tick); tmr = null;
+  const f = $('fuse');
+  if (!timeUp) { f.hidden = true; return; }
+  f.classList.add('done'); setTimeout(() => { f.hidden = true; f.classList.remove('done'); }, 1400);
+  if (typeof chime === 'function') { chime(2); setTimeout(() => chime(5), 170); }
+  const pi = paras().indexOf(t.pEl); if (pi >= 0) flashPara(paras()[pi]);
+  toast(t.c === 'g' ? 'Time check. Still writing, or polishing?' : 'Time check on this sentence.');
 }
 function startTimer(c, pEl, at0) {
   const secs = Math.max(5, Math.min(600, +tmrCfg(c).secs || 30));
@@ -1774,6 +1770,7 @@ function sentenceEnded() { sealOpen = null; }
 document.addEventListener('selectionchange', () => { if (!sealOpen) return; const s = getSel(); if (s && paras()[s.f.p] !== sealOpen) sealOpen = null; });
 // sealed text can't change: no deleting into it, no typing inside it
 function sealBlock(A, B) {
+  return false; // timers no longer seal anything
   const ps = paras(), ins = A.p === B.p && A.o === B.o;
   for (let pi = A.p; pi <= B.p; pi++) {
     const p = ps[pi]; if (!p || !p.querySelector('.xl')) continue;
@@ -1884,7 +1881,7 @@ ed.addEventListener('paste', e => {
   e.preventDefault();
   const t = (e.clipboardData.getData('text/plain') || '').replace(/\r\n?/g, '\n');
   if (!t) return;
-  if (rulesActive() || ptsActive() || ed.querySelector('.xl')) {
+  if (rulesActive() || ptsActive()) {
     const s = getSel();
     if (s) {
       const [A, B] = ordered(s), rOn = rulesActive();
