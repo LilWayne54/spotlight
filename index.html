@@ -2312,7 +2312,7 @@ function parseDocXml(xml) {
       if (ln === 'commentRangeStart') { active.push(cid(el)); continue; }
       if (ln === 'commentRangeEnd') { const id = cid(el), i = active.lastIndexOf(id); if (i >= 0) active.splice(i, 1); continue; }
       const r = el, rPr = child(r, 'rPr'), u = child(rPr, 'u');
-      const st = { c: colorOf(rPr), b: onOff(rPr, 'b'), i: onOff(rPr, 'i'), u: !!u && !/^(none|0|false|dotted)$/.test(wval(u) || ''), x: onOff(rPr, 'strike') ? 's' : (u && wval(u) === 'dotted' ? 'a' : ''), k: active.length ? active[active.length - 1] : '' };
+      const st = { c: colorOf(rPr), b: onOff(rPr, 'b'), i: onOff(rPr, 'i'), u: !!u && !/^(none|0|false|dotted)$/.test(wval(u) || ''), x: onOff(rPr, 'strike') ? 's' : (u && wval(u) === 'dotted' ? 'a' : ''), k: active.length ? active[active.length - 1] : '', g: wval(child(rPr, 'rStyle')) === 'StoplightGag' };
       let t = '';
       for (const ch of r.children) {
         if (ch.namespaceURI !== W) continue;
@@ -2359,7 +2359,7 @@ function buildDocXml(withColors) {
       if (k !== cur) { x += closeCur(); if (k) { x += `<w:commentRangeStart w:id="${num[k]}"/>`; cur = k; } }
       if (r.pn && beats[r.pn]) { bmk++; x += `<w:bookmarkStart w:id="${bmk}" w:name="beat_${r.pn}"/><w:bookmarkEnd w:id="${bmk}"/>`; }
       if (r.x === 's' && !withColors) continue;
-      let rp = '';
+      let rp = withColors && r.g ? '<w:rStyle w:val="StoplightGag"/>' : '';
       if (r.b) rp += '<w:b/><w:bCs/>';
       if (r.i) rp += '<w:i/><w:iCs/>';
       if (r.x === 's') rp += '<w:strike/>';
@@ -2399,7 +2399,7 @@ function parseCustomXml(xml) {
 }
 function buildStyles() {
   const f = xmlEsc(settings.font), sz = Math.round(settings.size * 2), ln = Math.round(settings.line * 240);
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles xmlns:w="${W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${f}" w:hAnsi="${f}" w:eastAsia="${f}" w:cs="${f}"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:lang w:val="en-US"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="${ln}" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style></w:styles>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles xmlns:w="${W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${f}" w:hAnsi="${f}" w:eastAsia="${f}" w:cs="${f}"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:lang w:val="en-US"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="${ln}" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style><w:style w:type="character" w:customStyle="1" w:styleId="StoplightGag"><w:name w:val="Stoplight Gag"/></w:style></w:styles>`;
 }
 function firstWords() { const t = ed.textContent.trim().split(/\s+/).slice(0, 5).join(' ').replace(/[^\w\s'-]/g, '').trim(); return t || 'Untitled'; }
 
