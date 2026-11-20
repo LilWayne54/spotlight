@@ -163,6 +163,12 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .lockrow .lk svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .lockrow .lk small{font-weight:400;color:var(--dim)}
 body.ruleslocked #presetRow,body.ruleslocked #rulesRow,body.ruleslocked #eRules,body.ruleslocked .prow{opacity:.4;pointer-events:none}
+.lane i.rq{background:conic-gradient(var(--R) 0 33.3%,var(--Y) 0 66.6%,var(--G) 0) !important}
+.seg .rico{width:15px;height:15px;flex:none;overflow:visible}
+.seg button[aria-pressed="true"] .rico{animation:rqspin .5s var(--spring)}
+@keyframes rqspin{from{rotate:-90deg;scale:.6}to{rotate:0deg;scale:1}}
+.seg button[data-p="random"] .lbl,.seg button[data-p="scramble"] .lbl{display:none}
+@media (min-width:1500px){.seg button[data-p="random"] .lbl,.seg button[data-p="scramble"] .lbl{display:inline}}
 .linkbtn{font-size:12px;color:var(--dim);padding:4px 8px;border-radius:8px}
 .linkbtn:hover{background:rgba(255,255,255,.08);color:var(--cream)}
 .doc span[class*=" k-"]{box-shadow:inset 0 -2px 0 rgba(124,92,214,.75)}
@@ -604,7 +610,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
     <button data-p="climb"><span class="pips"><i style="background:var(--R)"></i><i style="background:var(--Y)"></i><i style="background:var(--G)"></i></span>Climb</button>
     <button data-p="leap"><span class="pips"><i style="background:var(--R)"></i><i style="background:var(--G)"></i><i style="background:var(--Y)"></i></span>Leap</button>
   </div></div>
-  <p class="hint">Climb and Leap move to the next color each time you start a new sentence.</p>
+  <p class="hint">Climb and Leap move to the next color each time you start a new sentence. <b>?</b> Random picks any color. <b>⤨</b> Scramble picks any color except the one you just used.</p>
   <h4>Font</h4>
   <div class="row"><select id="sFont"></select></div>
   <div class="row"><span>Size</span><div class="stepper"><button id="szDn">−</button><span id="szV">13</span><button id="szUp">+</button></div></div>
@@ -672,6 +678,14 @@ const ed = $('ed');
 const NAMES = { r: 'Red', y: 'Yellow', g: 'Green', n: 'No color' };
 const DESC = { r: 'not trying · no bashing', y: 'trying · no bashing', g: 'trying · bashing', n: 'plain text' };
 const BUILTIN = { climb: ['r', 'y', 'g'], leap: ['r', 'g', 'y'] };
+const RANDOMS = { random: 'Random', scramble: 'Scramble' };
+const isRand = id => !!RANDOMS[id || settings.pattern];
+// a truly random light; scramble never repeats the one before
+function rollColor(prev) {
+  const opts = settings.pattern === 'scramble' ? ['r', 'y', 'g'].filter(c => c !== prev) : ['r', 'y', 'g'];
+  const a = new Uint32Array(1); crypto.getRandomValues(a);
+  return opts[a[0] % opts.length];
+}
 let patPos = 0;
 function patSeq(id) {
   id = id || settings.pattern;
@@ -957,7 +971,7 @@ function updateModeUI(pulse) {
   $('mName').textContent = NAMES[mode]; $('mDesc').textContent = descOf(mode);
   for (const b of document.querySelectorAll('.lamp')) b.title = NAMES[b.dataset.c] + ': ' + descOf(b.dataset.c);
   const nx = nextOf(mode);
-  $('next').innerHTML = !patSeq() ? '' : `Next sentence: <b style="color:${{ r: '#ff8a82', y: '#ffd65c', g: '#7fd88b', n: '#ccc' }[nx]}">${NAMES[nx]}</b>`;
+  $('next').innerHTML = isRand() ? `Next sentence: <b style="background:linear-gradient(90deg,#ff8a82,#ffd65c,#7fd88b);-webkit-background-clip:text;background-clip:text;color:transparent">${settings.pattern === 'scramble' ? 'anything but ' + NAMES[mode] : 'anyone’s guess'}</b>` : !patSeq() ? '' : `Next sentence: <b style="color:${{ r: '#ff8a82', y: '#ffd65c', g: '#7fd88b', n: '#ccc' }[nx]}">${NAMES[nx]}</b>`;
   if (settings.mode !== mode) { settings.mode = mode; saveSettings(); }
   placeFlagSoon();
 }
@@ -991,6 +1005,7 @@ function setMode(c, opts = {}) {
   if (was !== c || opts.click) blip(c, false);
 }
 function advance(quiet) {
+  if (isRand()) { mode = rollColor(mode); updateModeUI(true); renderLane(true); if (!quiet) blip(mode, true); flagPulse(); return; }
   const seq = patSeq(); if (!seq) return;
   const i = posOfColor(mode); patPos = i < 0 ? 0 : (i + 1) % seq.length;
   mode = seq[patPos];
@@ -1040,6 +1055,7 @@ function deriveFromCaret(force) {
   const x = charStyleBefore(s); if (!x) { updateFmtUI(); return; }
   fmt = { b: x.r.b, i: x.r.i, u: x.r.u };
   let c = x.r.c, pos = -1;
+  if (isRand() && TERM_SPACE.test(x.before)) c = mode;
   const seq = patSeq();
   if (seq) {
     const p0 = inferPatPos(c, s);
@@ -2459,6 +2475,9 @@ function renderSeg() {
   add('free', '<span class="lbl">Free</span>', 'You pick every color');
   add('climb', pipsHTML(BUILTIN.climb) + '<span class="lbl">Climb</span>', 'Each new sentence moves red → yellow → green');
   add('leap', pipsHTML(BUILTIN.leap) + '<span class="lbl">Leap</span>', 'Each new sentence moves red → green → yellow');
+  if (!$('rqgDefs')) document.body.insertAdjacentHTML('beforeend', '<svg id="rqgDefs" width="0" height="0" style="position:absolute"><defs><linearGradient id="rqg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a70"/><stop offset=".5" stop-color="#ffd65c"/><stop offset="1" stop-color="#6fd27d"/></linearGradient></defs></svg>');
+  add('random', '<svg class="rico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="none" stroke="url(#rqg)" stroke-width="1.8"/><path d="M6.2 6.3a1.9 1.9 0 1 1 2.6 1.7c-.5.2-.8.6-.8 1.1v.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.6" r=".9" fill="currentColor"/></svg><span class="lbl">Random</span>', 'Each new sentence gets a truly random color');
+  add('scramble', '<svg class="rico" viewBox="0 0 16 16"><path d="M2 4.5h2.6c1.4 0 2.2.6 3 1.8l1.8 3.4c.7 1.2 1.5 1.8 2.9 1.8H14M2 11.5h2.6c1 0 1.7-.3 2.3-1M9.1 5.8c.6-.9 1.3-1.3 2.4-1.3H14M12.3 2.8l1.8 1.7-1.8 1.7M12.3 9.8l1.8 1.7-1.8 1.7" fill="none" stroke="url(#rqg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Scramble</span>', 'Each new sentence gets a random color, never the same one twice in a row');
   for (const p of settings.customPatterns || []) add(p.id, pipsHTML(p.seq) + `<span class="lbl">${escH(p.name)}</span>`, p.name + ' (right-click to edit)');
   const plus = add('+', '+', 'Make your own pattern'); plus.className = 'plus';
   for (const b of seg.children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
@@ -2609,6 +2628,12 @@ function chime(n) {
 function renderLane(slide) {
   const el = $('lane'); if (!el) return;
   const seq = patSeq(); el.textContent = '';
+  if (isRand()) {
+    const d0 = document.createElement('i'); d0.style.background = COLHEX[mode]; el.appendChild(d0);
+    for (let k = 0; k < 4; k++) { const d = document.createElement('i'); d.className = 'rq'; el.appendChild(d); }
+    if (slide) { el.classList.remove('slide'); void el.offsetWidth; el.classList.add('slide'); }
+    return;
+  }
   if (!seq) return;
   let c = mode;
   const list = [c];
@@ -3274,7 +3299,7 @@ addEventListener('pagehide', () => { if (dirty) saveCurrent(true); });
   if (!LINES.includes(settings.line)) settings.line = 1.5;
   if (!Array.isArray(settings.customPatterns)) settings.customPatterns = [];
   if (!beatVars.length) loadBeatState(null);
-  if (!(settings.pattern === 'free' || patSeq(settings.pattern))) settings.pattern = 'free';
+  if (!(settings.pattern === 'free' || isRand(settings.pattern) || patSeq(settings.pattern))) settings.pattern = 'free';
   renderSeg(); renderPatList();
   if (!(settings.zoom >= 0.5 && settings.zoom <= 3)) settings.zoom = 1;
   if (!FONTS.includes(settings.font)) settings.font = 'Georgia';
