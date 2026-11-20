@@ -1005,7 +1005,7 @@ function placeFlagSoon() { if (!flagQ) flagQ = requestAnimationFrame(() => { fla
 function placeFlag() {
   const fl = $('cflag'); if (!fl) return;
   const cs = getSelection();
-  if (document.activeElement !== ed || !cs.rangeCount || !ed.contains(cs.focusNode)) { fl.hidden = true; return; }
+  if (mode === 'n' || document.activeElement !== ed || !cs.rangeCount || !ed.contains(cs.focusNode)) { fl.hidden = true; return; }
   const rg = document.createRange(); rg.setStart(cs.focusNode, cs.focusOffset); rg.collapse(true);
   let r = rg.getClientRects()[0];
   if (!r) { const el = cs.focusNode.nodeType === 1 ? cs.focusNode : cs.focusNode.parentElement; r = el && el.getBoundingClientRect(); }
