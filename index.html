@@ -1012,6 +1012,7 @@ function redo() { if (!redoStack.length) return; if (!historyGate(redoStack[redo
 /* ---------- mode / pattern ---------- */
 function updateModeUI(pulse) {
   document.body.dataset.mode = mode;
+  if (typeof layoutLamps === 'function') try { layoutLamps(); } catch (e) {}
   for (const b of document.querySelectorAll('[data-c]')) {
     const on = b.dataset.c === mode;
     b.setAttribute('aria-pressed', on);
@@ -1046,6 +1047,7 @@ function placeFlag() {
 function flagPulse() { const fl = $('cflag'); if (!fl) return; fl.classList.remove('pop'); void fl.offsetWidth; fl.classList.add('pop'); }
 function updateFmtUI() { $('bB').setAttribute('aria-pressed', fmt.b); $('bI').setAttribute('aria-pressed', fmt.i); $('bU').setAttribute('aria-pressed', fmt.u); }
 function setMode(c, opts = {}) {
+  if (opts.click && patSeq() && !patSeq().includes(c)) { toast(NAMES[c] + ' isn’t in this pattern.'); blip('n', true); return; }
   if (opts.click && isRand()) { toast(RANDOMS[settings.pattern] + ' picks the colors. Switch to Free to pick your own.'); blip('n', true); flagPulse(); return; }
   const s = getSel();
   if (s && !collapsed(s) && !opts.typingOnly) { pushUndo('style', true); styleSel(() => ({ c })); changed(); }
@@ -1848,8 +1850,7 @@ function syncColors(keepList) {
       tap(b, () => { if (document.activeElement !== ed && !pagesOn) ed.focus(); setMode(b.dataset.c, { click: true }); });
       after.after(b); after = b;
     });
-    hz.classList.toggle('many', cs.length > 0 && cs.length <= 2); hz.classList.toggle('lots', cs.length > 2);
-    document.body.classList.toggle('xc1', cs.length >= 1); document.body.classList.toggle('xc3', cs.length >= 3); document.body.classList.toggle('xc5', cs.length >= 5);
+    layoutLamps();
   }
   // a row for each of your colors in edit rules, points and timers
   const clone = (sel, attr, wire) => {
@@ -1884,6 +1885,14 @@ function syncColors(keepList) {
     inp.addEventListener('change', () => { let v = parseInt(inp.value, 10); if (!(v >= 5)) v = 60; v = Math.min(600, v); inp.value = v; setTmr(id, { secs: v }); });
   });
   if (!keepList) renderCustList();
+}
+// only the lights your pattern uses are shown (the one you're on always stays)
+function layoutLamps() {
+  const seq = patSeq(), hz = document.querySelector('.housing');
+  for (const b of document.querySelectorAll('.lamp, .nolamp')) b.hidden = !!seq && !seq.includes(b.dataset.c) && b.dataset.c !== mode;
+  const n = hz ? hz.querySelectorAll('.lamp.cust:not([hidden])').length : 0;
+  if (hz) { hz.classList.toggle('many', n > 0 && n <= 2); hz.classList.toggle('lots', n > 2); }
+  document.body.classList.toggle('xc1', n >= 1); document.body.classList.toggle('xc3', n >= 3); document.body.classList.toggle('xc5', n >= 5);
 }
 function renderCustList() {
   const box = $('custList'); if (!box) return;
