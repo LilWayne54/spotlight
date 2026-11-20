@@ -79,6 +79,9 @@ body[data-mode="r"] .modecap b{color:#ff8a82} body[data-mode="y"] .modecap b{col
 .doc span{-webkit-box-decoration-break:clone;box-decoration-break:clone;border-radius:2px}
 .doc .xs{text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.42}
 .doc .u.xs{text-decoration:underline line-through}
+.doc .gg{background:#17130f;color:transparent;border-radius:3px;box-shadow:0 0 0 1px #17130f;-webkit-user-select:none;user-select:none}
+.doc .gg::selection{color:transparent}
+body.ungag .doc .gg{background:rgba(23,19,15,.13);color:inherit;box-shadow:inset 0 -2px 0 #17130f}
 .doc .xa{text-decoration:underline dotted;text-decoration-thickness:1.5px;text-underline-offset:.22em;opacity:.6}
 .doc .b{font-weight:700} .doc .i{font-style:italic} .doc .u{text-decoration:underline;text-underline-offset:.15em}
 .plain .doc .c-r,.plain .doc .c-y,.plain .doc .c-g{background:none}
@@ -130,6 +133,7 @@ body[data-mode="r"] #ed{caret-color:#d23a31} body[data-mode="y"] #ed{caret-color
 .meaning textarea:focus{background:rgba(255,255,255,.13)}
 .erules{margin:0 0 6px;transition:opacity .2s}
 .erules.off{opacity:.38;pointer-events:none}
+#gagNRow.off,#gagRvRow.off{opacity:.38;pointer-events:none}
 .erow{display:flex;align-items:center;gap:10px;margin:0 0 8px}
 .erow>i{flex:none;width:14px;height:14px;border-radius:50%}
 .eseg{display:flex;flex:1;min-width:0;padding:3px;border-radius:10px;background:rgba(0,0,0,.28);box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
@@ -659,6 +663,11 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <h4 style="margin-top:4px">Game layer</h4>
   <div class="row"><span>Combos, sparks &amp; glow</span><button class="toggle" id="tFx" role="switch"></button></div>
   <div class="row"><span>Run cards after a break</span><button class="toggle" id="tRun" role="switch"></button></div>
+  <h4 style="margin-top:4px">Gagged words</h4>
+  <div class="row"><span>Gag nouns after each paragraph</span><button class="toggle" id="tGag" role="switch"></button></div>
+  <div class="row" id="gagNRow"><span>Words to gag</span><div class="stepper"><button id="gagDn">−</button><span id="gagV">4</span><button id="gagUp">+</button></div></div>
+  <div class="row" id="gagRvRow"><span>Reveal what's under the bars</span><button class="toggle" id="tGagRv" role="switch"></button></div>
+  <p class="ehint">When you finish a paragraph, that many of its nouns get blacked out at random, so you can't protect your favorites. Write the next paragraph like a new writer who never saw them: read what each sentence is doing and carry on from there. Reveal shows both stories, the one each new writer saw and the real one. Exports always keep the real words.</p>
   <h4 style="margin-top:4px">Custom patterns</h4>
   <div id="patList"></div>
   <div class="row" style="justify-content:flex-start;margin-top:2px"><button class="linkbtn" id="patNew">+ New pattern</button></div>
@@ -760,9 +769,9 @@ let file = { path: null, foreign: false }, dirty = false, composing = false, own
 let currentId = null;
 
 /* ---------- runs model ---------- */
-const keyOf = r => 'c-' + r.c + (r.b ? ' b' : '') + (r.i ? ' i' : '') + (r.u ? ' u' : '') + (r.x ? ' x' + r.x : '') + (r.k ? ' k-' + r.k : '') + (r.pn ? ' pn-' + r.pn : '');
-const same = (a, b) => a.c === b.c && a.b === b.b && a.i === b.i && a.u === b.u && (a.x || '') === (b.x || '') && (a.k || '') === (b.k || '') && (a.pn || '') === (b.pn || '');
-function pushRun(runs, r) { if (!r.t) return; const l = runs[runs.length - 1]; if (l && same(l, r)) l.t += r.t; else runs.push({ t: r.t, c: r.c, b: !!r.b, i: !!r.i, u: !!r.u, x: r.x || '', k: r.k || '', pn: r.pn || '' }); }
+const keyOf = r => 'c-' + r.c + (r.b ? ' b' : '') + (r.i ? ' i' : '') + (r.u ? ' u' : '') + (r.x ? ' x' + r.x : '') + (r.k ? ' k-' + r.k : '') + (r.pn ? ' pn-' + r.pn : '') + (r.g ? ' gg' : '');
+const same = (a, b) => a.c === b.c && a.b === b.b && a.i === b.i && a.u === b.u && (a.x || '') === (b.x || '') && (a.k || '') === (b.k || '') && (a.pn || '') === (b.pn || '') && !!a.g === !!b.g;
+function pushRun(runs, r) { if (!r.t) return; const l = runs[runs.length - 1]; if (l && same(l, r)) l.t += r.t; else runs.push({ t: r.t, c: r.c, b: !!r.b, i: !!r.i, u: !!r.u, x: r.x || '', k: r.k || '', pn: r.pn || '', g: !!r.g }); }
 function concatRuns(...arrs) { const o = []; for (const a of arrs) for (const r of a) pushRun(o, r); return o; }
 function splitRuns(runs, off) {
   const L = [], R = []; let acc = 0;
@@ -789,10 +798,11 @@ function pToRuns(p) {
         if (tg === 'I' || tg === 'EM' || cl.contains('i') || ch.style.fontStyle === 'italic') s.i = true;
         if (tg === 'U' || cl.contains('u') || /underline/.test(ch.style.textDecoration || '')) s.u = true;
         if (cl.contains('xs')) s.x = 's'; else if (cl.contains('xa')) s.x = 'a';
+        if (cl.contains('gg')) s.g = true;
         walk(ch, s);
       }
     }
-  })(p, { c: 'n', b: false, i: false, u: false, x: '', k: '', pn: '' });
+  })(p, { c: 'n', b: false, i: false, u: false, x: '', k: '', pn: '', g: false });
   return runs;
 }
 function render(p, runs) {
@@ -810,7 +820,7 @@ function canonical(p) {
   for (const n of ch) {
     if (isBrk(n)) { prev = null; continue; }
     if (n.nodeName !== 'SPAN' || n.childNodes.length !== 1 || n.firstChild.nodeType !== 3 || !n.firstChild.data ||
-        /[​\r\n]/.test(n.firstChild.data) || !/^c-[a-z]( b)?( i)?( u)?( x[sal])?( k-[a-z0-9]+)?( pn-[a-z0-9]+)?$/.test(n.className) || n.getAttribute('style')) return false;
+        /[​\r\n]/.test(n.firstChild.data) || !/^c-[a-z]( b)?( i)?( u)?( x[sal])?( k-[a-z0-9]+)?( pn-[a-z0-9]+)?( gg)?$/.test(n.className) || n.getAttribute('style')) return false;
     if (prev && prev.className === n.className) return false;
     prev = n;
   }
@@ -978,6 +988,84 @@ function selRuns() {
     out.push(...M);
   }
   return out;
+}
+
+/* ---------- gagged words ---------- */
+function gagCfg() { const g = settings.gag || {}; return { on: !!g.on, n: Math.max(1, Math.min(12, g.n || 4)), reveal: !!g.reveal }; }
+const GAG_DET = new Set('the a an this that these those my your his her its our their some every each no any another such whose one two three four five six seven eight nine ten several many few both either neither'.split(' '));
+const GAG_STOP = new Set(("i me you he him she her it we us they them my your his its our their mine yours hers ours theirs myself yourself himself herself itself ourselves themselves "
+  + "the a an this that these those and or but nor so yet for if then than as because while when where whether though although until unless since once "
+  + "of in on at by to from with without into onto upon over under about above below between through during before after around against along across behind beyond near off out up down toward towards within "
+  + "is am are was were be been being have has had having do does did doing done will would shall should can could may might must "
+  + "not no yes very just only also even still too really quite rather almost already always never ever often sometimes soon now here there again away back "
+  + "what which who whom whose why how all any both each every few more most other some such own same so "
+  + "get got go went gone come came said say says see saw seen know knew made make take took think thought look looked felt feel like "
+  + "something anything nothing everything someone anyone nobody everyone somebody anybody").split(' '));
+const GAG_ADJ = new Set('old new big small little long short tall red orange yellow green blue purple pink black white gray grey brown pale dark light bright cold warm hot cool good bad great young last first next other same whole tiny huge wet dry soft hard empty dead broken strange quiet loud heavy thin thick deep low high sweet sour wide narrow full fresh clean dirty rough smooth sharp dull sick tired sad happy angry wild plain fat slow fast late early real true false free open closed dear poor rich weird gentle cruel bare naked raw rotten sticky crass lower upper inner outer older elder'.split(' '));
+const isAdjish = w => GAG_ADJ.has(w) || (w.length > 5 && /(ous|ful|ive|ical|ic|able|ible|less|ish|ary|est)$/.test(w)) || (w.length > 4 && /(ed|en)$/.test(w));
+const GAG_VERB = new Set('fell ran sat stood went came saw said took gave held felt made found left lay rose broke drove flew grew knew began spoke turned shook hung slid struck swung stuck sank sang rang threw wore woke tore bit hid fed led met paid put read sent set shut slept spun spent stole swam told thought wept won wrote is was are were has had does did will would can could'.split(' '));
+const verbish = w => GAG_VERB.has(w) || (w.length > 3 && /ed$/.test(w)) || /ly$/.test(w);
+const isNounSuffix = w => w.length > 5 && /(tion|sion|ment|ness|ity|ship|hood|ism|dom|ance|ence|ure)$/.test(w);
+function gagRand(n) { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
+function gagShuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = gagRand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function gagPicks(text, n, skip) {
+  const toks = []; const re = /[A-Za-z][A-Za-z'’-]*/g; let m;
+  while ((m = re.exec(text))) {
+    let t = m[0], e = m.index + t.length;
+    const pm = /['’]s?$/.exec(t); if (pm && t.length - pm[0].length > 1) { t = t.slice(0, t.length - pm[0].length); e = m.index + t.length; }
+    t = t.replace(/-+$/, ''); e = m.index + t.length;
+    if (!t) continue;
+    if (skip(m.index, e)) continue;
+    toks.push({ s: m.index, e, w: t, l: t.toLowerCase() });
+  }
+  const adj = (a, b) => b && /^[ \t]+$/.test(text.slice(a.e, b.s));
+  const pick = new Map(), add = k => { if (!GAG_STOP.has(k.l) && k.w.length > 1) pick.set(k.s, k); };
+  toks.forEach((k, i) => {
+    if (GAG_DET.has(k.l)) {
+      let j = i + 1;
+      for (let step = 0; step < 3 && toks[j] && adj(toks[j - 1], toks[j]); step++) {
+        const c = toks[j];
+        if (GAG_STOP.has(c.l) || GAG_DET.has(c.l)) break;
+        const nx = toks[j + 1];
+        if ((isAdjish(c.l) || (c.l.length > 4 && /(er|y)$/.test(c.l))) && nx && adj(c, nx) && !GAG_STOP.has(nx.l) && !GAG_DET.has(nx.l) && !verbish(nx.l)) { j++; continue; }
+        add(c); break;
+      }
+    }
+    if (isNounSuffix(k.l)) add(k);
+    if (/^[A-Z]/.test(k.w) && k.w !== 'I' && i > 0) {
+      const before = text.slice(0, k.s).replace(/[\s"'“‘(\[*_]+$/, '');
+      if (before && !/[.!?…:]$/.test(before)) add(k);
+    }
+  });
+  let chosen = gagShuffle([...pick.values()]).slice(0, n);
+  if (chosen.length < n) {
+    const have = new Set(chosen.map(k => k.s));
+    const extra = toks.filter(k => !have.has(k.s) && k.w.length > 3 && !GAG_STOP.has(k.l) && !verbish(k.l));
+    chosen = chosen.concat(gagShuffle(extra).slice(0, n - chosen.length));
+  }
+  return chosen.sort((a, b) => a.s - b.s);
+}
+function gagPara(p) {
+  const runs = pToRuns(p); if (!runs.length || runs.some(r => r.g)) return 0;
+  const text = runs.map(r => r.t).join('');
+  if (!text.trim()) return 0;
+  const struck = []; let acc = 0; for (const r of runs) { if (r.x === 's') struck.push([acc, acc + r.t.length]); acc += r.t.length; }
+  const picks = gagPicks(text, gagCfg().n, (a, b) => struck.some(([x, y]) => a < y && b > x));
+  if (!picks.length) return 0;
+  let out = runs;
+  for (const k of picks.slice().reverse()) {
+    const [L, rest] = splitRuns(out, k.s), [M, R] = splitRuns(rest, k.e - k.s);
+    out = concatRuns(L, M.map(r => ({ ...r, g: true })), R);
+  }
+  render(p, out);
+  if (settings.fx !== false && !gagCfg().reveal) for (const el of p.querySelectorAll('.gg')) { try { el.animate([{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }], { duration: 260, easing: 'cubic-bezier(.3,.7,.2,1)', delay: 40 * [...p.querySelectorAll('.gg')].indexOf(el) }); } catch (e) {} }
+  return picks.length;
+}
+function gagAfterEnter(pi) {
+  if (!gagCfg().on) return;
+  const p = paras()[pi]; if (!p) return;
+  const sel = getSel();
+  if (gagPara(p)) { blip('n', true); if (sel) setSel(clampSel(sel)); }
 }
 
 /* ---------- undo ---------- */
@@ -2021,6 +2109,7 @@ ed.addEventListener('beforeinput', e => {
     pushUndo('para', true);
     splitPara(); sentenceEnded();
     if (TERM_END.test(x.trimEnd())) { sentenceDone(mode, x); advance(true); }
+    gagAfterEnter(s.f.p);
     changed();
   } else if (t === 'historyUndo') { e.preventDefault(); undo(); }
   else if (t === 'historyRedo') { e.preventDefault(); redo(); }
@@ -2128,6 +2217,8 @@ function applySettings() {
   $('tDash').setAttribute('aria-checked', settings.dashes !== false);
   $('tFx').setAttribute('aria-checked', settings.fx !== false);
   $('tRun').setAttribute('aria-checked', settings.runCards !== false);
+  { const g = gagCfg(); $('tGag').setAttribute('aria-checked', !!g.on); $('gagV').textContent = g.n; $('tGagRv').setAttribute('aria-checked', !!g.reveal);
+    $('gagNRow').classList.toggle('off', !g.on); $('gagRvRow').classList.toggle('off', !g.on); document.body.classList.toggle('ungag', !!g.reveal); }
   for (const b of $('seg').children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
   $('tRules').setAttribute('aria-checked', settings.rulesOn !== false);
   for (const row of document.querySelectorAll('.trow')) {
@@ -3519,6 +3610,10 @@ $('bDare').addEventListener('mousedown', e => e.preventDefault());
 $('bDare').onclick = () => { if (dare && !$('dare').hidden) { dare = null; $('dare').hidden = true; } else rollDare(); };
 $('bBeats').addEventListener('mousedown', e => e.preventDefault());
 $('bBeats').onclick = () => toggleBeats();
+$('tGag').onclick = () => { const g = gagCfg(); g.on = !g.on; settings.gag = g; saveSettings(); applySettings(); blip('n', true); if (g.on) toast('Gagging ' + g.n + ' nouns after each paragraph'); };
+$('tGagRv').onclick = () => { const g = gagCfg(); g.reveal = !g.reveal; settings.gag = g; saveSettings(); applySettings(); blip('n', true); };
+$('gagDn').onclick = () => { const g = gagCfg(); g.n = Math.max(1, g.n - 1); settings.gag = g; saveSettings(); applySettings(); };
+$('gagUp').onclick = () => { const g = gagCfg(); g.n = Math.min(12, g.n + 1); settings.gag = g; saveSettings(); applySettings(); };
 for (const [id, k] of [['tFx', 'fx'], ['tRun', 'runCards']]) $(id).onclick = () => { settings[k] = settings[k] === false; saveSettings(); applySettings(); showCombo(false); };
 $('tDash').onclick = () => { settings.dashes = settings.dashes === false; saveSettings(); applySettings(); blip('n', true); };
 for (const [id, k] of [['tIndent', 'indent'], ['tDrop', 'dropcap'], ['tSound', 'sound']]) $(id).onclick = () => { settings[k] = !settings[k]; saveSettings(); applySettings(); if (k === 'sound') blip('g', false); };
