@@ -2603,8 +2603,8 @@ function renderPatList() {
 }
 function choosePattern(id) {
   settings.pattern = id; patPos = 0;
-  const seq = patSeq(), was = mode; if (seq) mode = seq[0];
-  saveSettings(); applySettings(); renderSeg(); updateModeUI(false); renderLane(false); if (seq && was !== mode) flagPulse(); blip(seq ? mode : 'n', true);
+  const seq = patSeq(), was = mode, rnd = isRand(id); if (seq) mode = seq[0]; else if (rnd) mode = rollColor(mode);
+  saveSettings(); applySettings(); renderSeg(); updateModeUI(rnd); renderLane(rnd); if ((seq || rnd) && was !== mode) flagPulse(); blip(seq || rnd ? mode : 'n', true);
 }
 function editPattern(id) {
   const list = settings.customPatterns || (settings.customPatterns = []);
