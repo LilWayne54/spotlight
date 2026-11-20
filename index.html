@@ -635,6 +635,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="row"><span>Indent paragraphs</span><button class="toggle" id="tIndent" role="switch"></button></div>
   <div class="row"><span>Drop cap</span><button class="toggle" id="tDrop" role="switch"></button></div>
   <div class="row"><span>Clicky sounds</span><button class="toggle" id="tSound" role="switch"></button></div>
+  <div class="row"><span>Smart dashes <small style="color:var(--faint)">-- → — · space-hyphen-space → –</small></span><button class="toggle" id="tDash" role="switch"></button></div>
   <h4 style="margin-top:4px">Game layer</h4>
   <div class="row"><span>Combos, sparks &amp; glow</span><button class="toggle" id="tFx" role="switch"></button></div>
   <div class="row"><span>Run cards after a break</span><button class="toggle" id="tRun" role="switch"></button></div>
@@ -1849,7 +1850,11 @@ ed.addEventListener('beforeinput', e => {
     const x = collapsed(s) ? textOf(paras()[s.f.p]).slice(0, s.f.o) : '';
     pushUndo('type', e.data === ' ' || !collapsed(s));
     timerOnType(e.data);
-    insertText(e.data); typedSince += e.data.replace(/\s/g, '').length;
+    const sd = settings.dashes !== false && collapsed(s);
+    if (sd && e.data === '-' && /(^|[^-])-$/.test(x)) { deleteChar(true); insertText('—'); }
+    else if (sd && e.data === ' ' && /(^|\s)-$/.test(x)) { deleteChar(true); insertText('– '); }
+    else insertText(e.data);
+    typedSince += e.data.replace(/\s/g, '').length;
     if (e.data === ' ' && TERM_END.test(x)) { sentenceDone(mode, x); advance(true); sentenceEnded(); }
     changed();
   } else if (t === 'insertParagraph' || t === 'insertLineBreak') {
@@ -1964,6 +1969,7 @@ function applySettings() {
   $('tIndent').setAttribute('aria-checked', !!settings.indent);
   $('tDrop').setAttribute('aria-checked', !!settings.dropcap);
   $('tSound').setAttribute('aria-checked', !!settings.sound);
+  $('tDash').setAttribute('aria-checked', settings.dashes !== false);
   $('tFx').setAttribute('aria-checked', settings.fx !== false);
   $('tRun').setAttribute('aria-checked', settings.runCards !== false);
   for (const b of $('seg').children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
@@ -3356,6 +3362,7 @@ $('bDare').onclick = () => { if (dare && !$('dare').hidden) { dare = null; $('da
 $('bBeats').addEventListener('mousedown', e => e.preventDefault());
 $('bBeats').onclick = () => toggleBeats();
 for (const [id, k] of [['tFx', 'fx'], ['tRun', 'runCards']]) $(id).onclick = () => { settings[k] = settings[k] === false; saveSettings(); applySettings(); showCombo(false); };
+$('tDash').onclick = () => { settings.dashes = settings.dashes === false; saveSettings(); applySettings(); blip('n', true); };
 for (const [id, k] of [['tIndent', 'indent'], ['tDrop', 'dropcap'], ['tSound', 'sound']]) $(id).onclick = () => { settings[k] = !settings[k]; saveSettings(); applySettings(); if (k === 'sound') blip('g', false); };
 
 /* pinch to zoom */
