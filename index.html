@@ -701,6 +701,8 @@ const BUILTIN = { climb: ['r', 'y', 'g'], leap: ['r', 'g', 'y'] };
 const RANDOMS = { random: 'Random', scramble: 'Scramble' };
 const isRand = id => !!RANDOMS[id || settings.pattern];
 // a truly random light; scramble never repeats the one before
+let owed = null; // the color Random/Scramble picked for the next sentence; it sticks until that sentence is started
+function rollOwed() { if (!owed) owed = { c: rollColor(mode) }; return owed.c; }
 function rollColor(prev) {
   const opts = settings.pattern === 'scramble' ? ['r', 'y', 'g'].filter(c => c !== prev) : ['r', 'y', 'g'];
   const a = new Uint32Array(1); crypto.getRandomValues(a);
@@ -1019,6 +1021,7 @@ function placeFlag() {
 function flagPulse() { const fl = $('cflag'); if (!fl) return; fl.classList.remove('pop'); void fl.offsetWidth; fl.classList.add('pop'); }
 function updateFmtUI() { $('bB').setAttribute('aria-pressed', fmt.b); $('bI').setAttribute('aria-pressed', fmt.i); $('bU').setAttribute('aria-pressed', fmt.u); }
 function setMode(c, opts = {}) {
+  if (opts.click && isRand()) { toast(RANDOMS[settings.pattern] + ' picks the colors. Switch to Free to pick your own.'); blip('n', true); flagPulse(); return; }
   const s = getSel();
   if (s && !collapsed(s) && !opts.typingOnly) { pushUndo('style', true); styleSel(() => ({ c })); changed(); }
   const was = mode; mode = c;
@@ -1027,7 +1030,7 @@ function setMode(c, opts = {}) {
   if (was !== c || opts.click) blip(c, false);
 }
 function advance(quiet) {
-  if (isRand()) { mode = rollColor(mode); updateModeUI(true); renderLane(true); if (!quiet) blip(mode, true); flagPulse(); return; }
+  if (isRand()) { mode = rollOwed(); updateModeUI(true); renderLane(true); if (!quiet) blip(mode, true); flagPulse(); return; }
   const seq = patSeq(); if (!seq) return;
   const i = posOfColor(mode); patPos = i < 0 ? 0 : (i + 1) % seq.length;
   mode = seq[patPos];
@@ -1077,7 +1080,7 @@ function deriveFromCaret(force) {
   const x = charStyleBefore(s); if (!x) { updateFmtUI(); return; }
   fmt = { b: x.r.b, i: x.r.i, u: x.r.u };
   let c = x.r.c, pos = -1;
-  if (isRand() && TERM_SPACE.test(x.before)) c = mode;
+  if (isRand() && TERM_SPACE.test(x.before)) c = owed ? owed.c : mode;
   const seq = patSeq();
   if (seq) {
     const p0 = inferPatPos(c, s);
@@ -1763,7 +1766,7 @@ function timerOnType(data) {
   const s = getSel(); if (!s || !collapsed(s) || !/\S/.test(data)) return;
   const before = textOf(paras()[s.f.p]).slice(0, s.f.o);
   if (!(/^\s*$/.test(before) || TERM_SPACE.test(before))) return;
-  sealOpen = null;
+  owed = null; sealOpen = null;
   if (tmr) stopTimer(false);
   if (tmrCfg(mode).on && (mode === 'r' || mode === 'y' || mode === 'g')) startTimer(mode, paras()[s.f.p], s.f.o);
 }
@@ -2603,7 +2606,7 @@ function renderPatList() {
 }
 function choosePattern(id) {
   settings.pattern = id; patPos = 0;
-  const seq = patSeq(), was = mode, rnd = isRand(id); if (seq) mode = seq[0]; else if (rnd) mode = rollColor(mode);
+  const seq = patSeq(), was = mode, rnd = isRand(id); if (seq) mode = seq[0]; else if (rnd) mode = rollOwed();
   saveSettings(); applySettings(); renderSeg(); updateModeUI(rnd); renderLane(rnd); if ((seq || rnd) && was !== mode) flagPulse(); blip(seq || rnd ? mode : 'n', true);
 }
 function editPattern(id) {
