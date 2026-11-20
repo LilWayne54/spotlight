@@ -169,6 +169,7 @@ body.ruleslocked #presetRow,body.ruleslocked #rulesRow,body.ruleslocked #eRules,
 @keyframes rqspin{from{rotate:-90deg;scale:.6}to{rotate:0deg;scale:1}}
 .seg button[data-p="random"] .lbl,.seg button[data-p="scramble"] .lbl{display:none}
 @media (min-width:1500px){.seg button[data-p="random"] .lbl,.seg button[data-p="scramble"] .lbl{display:inline}}
+.seg .segsep{flex:none;align-self:center;width:1px;height:16px;margin:0 3px;background:rgba(255,255,255,.14)}
 .linkbtn{font-size:12px;color:var(--dim);padding:4px 8px;border-radius:8px}
 .linkbtn:hover{background:rgba(255,255,255,.08);color:var(--cream)}
 .doc span[class*=" k-"]{box-shadow:inset 0 -2px 0 rgba(124,92,214,.75)}
@@ -610,7 +611,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
     <button data-p="climb"><span class="pips"><i style="background:var(--R)"></i><i style="background:var(--Y)"></i><i style="background:var(--G)"></i></span>Climb</button>
     <button data-p="leap"><span class="pips"><i style="background:var(--R)"></i><i style="background:var(--G)"></i><i style="background:var(--Y)"></i></span>Leap</button>
   </div></div>
-  <p class="hint">Climb and Leap move to the next color each time you start a new sentence. <b>?</b> Random picks any color. <b>⤨</b> Scramble picks any color except the one you just used.</p>
+  <p class="hint"><b>?</b> Random picks any color. <b>⤨</b> Scramble picks any color except the one you just used. Climb and Leap move to the next color each time you start a new sentence.</p>
   <h4>Font</h4>
   <div class="row"><select id="sFont"></select></div>
   <div class="row"><span>Size</span><div class="stepper"><button id="szDn">−</button><span id="szV">13</span><button id="szUp">+</button></div></div>
@@ -2473,11 +2474,12 @@ function renderSeg() {
   const seg = $('seg'); seg.textContent = '';
   const add = (id, html, title) => { const b = document.createElement('button'); b.dataset.p = id; b.innerHTML = html; if (title) b.title = title; seg.appendChild(b); return b; };
   add('free', '<span class="lbl">Free</span>', 'You pick every color');
-  add('climb', pipsHTML(BUILTIN.climb) + '<span class="lbl">Climb</span>', 'Each new sentence moves red → yellow → green');
-  add('leap', pipsHTML(BUILTIN.leap) + '<span class="lbl">Leap</span>', 'Each new sentence moves red → green → yellow');
   if (!$('rqgDefs')) document.body.insertAdjacentHTML('beforeend', '<svg id="rqgDefs" width="0" height="0" style="position:absolute"><defs><linearGradient id="rqg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7a70"/><stop offset=".5" stop-color="#ffd65c"/><stop offset="1" stop-color="#6fd27d"/></linearGradient></defs></svg>');
   add('random', '<svg class="rico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="none" stroke="url(#rqg)" stroke-width="1.8"/><path d="M6.2 6.3a1.9 1.9 0 1 1 2.6 1.7c-.5.2-.8.6-.8 1.1v.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.6" r=".9" fill="currentColor"/></svg><span class="lbl">Random</span>', 'Each new sentence gets a truly random color');
   add('scramble', '<svg class="rico" viewBox="0 0 16 16"><path d="M2 4.5h2.6c1.4 0 2.2.6 3 1.8l1.8 3.4c.7 1.2 1.5 1.8 2.9 1.8H14M2 11.5h2.6c1 0 1.7-.3 2.3-1M9.1 5.8c.6-.9 1.3-1.3 2.4-1.3H14M12.3 2.8l1.8 1.7-1.8 1.7M12.3 9.8l1.8 1.7-1.8 1.7" fill="none" stroke="url(#rqg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Scramble</span>', 'Each new sentence gets a random color, never the same one twice in a row');
+  { const d = document.createElement('span'); d.className = 'segsep'; d.setAttribute('aria-hidden', 'true'); seg.appendChild(d); }
+  add('climb', pipsHTML(BUILTIN.climb) + '<span class="lbl">Climb</span>', 'Each new sentence moves red → yellow → green');
+  add('leap', pipsHTML(BUILTIN.leap) + '<span class="lbl">Leap</span>', 'Each new sentence moves red → green → yellow');
   for (const p of settings.customPatterns || []) add(p.id, pipsHTML(p.seq) + `<span class="lbl">${escH(p.name)}</span>`, p.name + ' (right-click to edit)');
   const plus = add('+', '+', 'Make your own pattern'); plus.className = 'plus';
   for (const b of seg.children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
