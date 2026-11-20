@@ -170,6 +170,19 @@ body.ruleslocked #presetRow,body.ruleslocked #rulesRow,body.ruleslocked #eRules,
 .seg button[data-p="random"] .lbl,.seg button[data-p="scramble"] .lbl{display:none}
 @media (min-width:1500px){.seg button[data-p="random"] .lbl,.seg button[data-p="scramble"] .lbl{display:inline}}
 .seg .segsep{flex:none;align-self:center;width:1px;height:16px;margin:0 3px;background:rgba(255,255,255,.14)}
+.fuse{position:fixed;z-index:6;height:4px;pointer-events:none;transition:opacity .3s}
+.fuse[hidden]{display:none}
+.fuse i{position:absolute;left:0;top:0;bottom:0;border-radius:0 99px 99px 0;background:var(--fc);box-shadow:0 0 10px var(--fc)}
+.fuse b{position:absolute;top:7px;translate:-50% 0;padding:2px 7px;border-radius:99px;background:#1d1915;color:var(--fc);font:800 11px/1.3 system-ui,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;box-shadow:0 2px 8px rgba(0,0,0,.4);white-space:nowrap}
+.fuse.low i{animation:fuselow .5s ease-in-out infinite alternate}
+.fuse.low b{color:#fff;background:var(--fcd)}
+@keyframes fuselow{from{opacity:1}to{opacity:.45}}
+.trow{display:flex;align-items:center;gap:9px;margin:0 0 9px;font-size:12px;color:var(--dim)}
+.trow>i{flex:none;width:14px;height:14px;border-radius:50%}
+.trow .toggle{flex:none}
+.trow label{display:flex;align-items:center;gap:5px;white-space:nowrap;transition:opacity .2s}
+.trow.off label{opacity:.35;pointer-events:none}
+body.ruleslocked .trow{opacity:.4;pointer-events:none}
 .linkbtn{font-size:12px;color:var(--dim);padding:4px 8px;border-radius:8px}
 .linkbtn:hover{background:rgba(255,255,255,.08);color:var(--cream)}
 .doc span[class*=" k-"]{box-shadow:inset 0 -2px 0 rgba(124,92,214,.75)}
@@ -647,9 +660,14 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="prow" data-pc="y"><i style="background:var(--Y)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
   <div class="prow" data-pc="g"><i style="background:var(--G)"></i><button class="toggle" role="switch"></button><label>Max <input class="pnum pmax" type="number" inputmode="numeric" min="1" max="9999"></label><label>1 per <input class="pnum sm prate" type="number" inputmode="numeric" min="1" max="99"> chars</label></div>
   <p class="ehint">Writing earns a color points, up to its max. Deleting costs one point per character removed, and typing into the middle of a sentence costs one per character. When a color runs out, its text can't change until you write more in that color. The count shows on each light.</p>
+  <h4 style="margin-top:4px">Sentence timers</h4>
+  <div class="trow" data-tc="r"><i style="background:var(--R)"></i><button class="toggle" role="switch"></button><label><input class="pnum tsec" type="number" inputmode="numeric" min="5" max="600"> seconds</label></div>
+  <div class="trow" data-tc="y"><i style="background:var(--Y)"></i><button class="toggle" role="switch"></button><label><input class="pnum tsec" type="number" inputmode="numeric" min="5" max="600"> seconds</label></div>
+  <div class="trow" data-tc="g"><i style="background:var(--G)"></i><button class="toggle" role="switch"></button><label><input class="pnum tsec" type="number" inputmode="numeric" min="5" max="600"> seconds</label></div>
+  <p class="ehint">When you start a sentence in a timed color, a fuse starts burning. The sentence is sealed when the time runs out or when you start the next sentence, whichever comes first. If time runs out mid-sentence you can still finish it, but you can't go back into it. Sealed sentences can't be edited, undone or retyped, only struck out.</p>
   <h4 style="margin-top:4px">Share your setup</h4>
   <div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap"><button class="pchip" id="setupExport">Export rules &amp; colors…</button><button class="pchip" id="setupImport">Import…</button></div>
-  <p class="ehint">Saves your edit rules, points, presets, color meanings and custom patterns to a file you can keep, share, or open on your other device.</p>
+  <p class="ehint">Saves your edit rules, points, timers, presets, color meanings and custom patterns to a file you can keep, share, or open on your other device.</p>
 </div>
 
 <div class="veil" id="veilDocs" hidden></div>
@@ -670,6 +688,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
 <div class="fxlayer" id="fx"></div>
 <div class="runcard" id="runcard" hidden></div>
 <div class="toast" id="toast"></div>
+<div class="fuse" id="fuse" hidden><i></i><b></b></div>
 
 <script>
 'use strict';
@@ -741,7 +760,7 @@ function pToRuns(p) {
         if (tg === 'B' || tg === 'STRONG' || cl.contains('b') || /^(bold|[6-9]00)$/.test(ch.style.fontWeight)) s.b = true;
         if (tg === 'I' || tg === 'EM' || cl.contains('i') || ch.style.fontStyle === 'italic') s.i = true;
         if (tg === 'U' || cl.contains('u') || /underline/.test(ch.style.textDecoration || '')) s.u = true;
-        if (cl.contains('xs')) s.x = 's'; else if (cl.contains('xa')) s.x = 'a';
+        if (cl.contains('xs')) s.x = 's'; else if (cl.contains('xa')) s.x = 'a'; else if (cl.contains('xl')) s.x = 'l';
         walk(ch, s);
       }
     }
@@ -763,7 +782,7 @@ function canonical(p) {
   for (const n of ch) {
     if (isBrk(n)) { prev = null; continue; }
     if (n.nodeName !== 'SPAN' || n.childNodes.length !== 1 || n.firstChild.nodeType !== 3 || !n.firstChild.data ||
-        /[​\r\n]/.test(n.firstChild.data) || !/^c-[rygn]( b)?( i)?( u)?( x[sa])?( k-[a-z0-9]+)?( pn-[a-z0-9]+)?$/.test(n.className) || n.getAttribute('style')) return false;
+        /[​\r\n]/.test(n.firstChild.data) || !/^c-[rygn]( b)?( i)?( u)?( x[sal])?( k-[a-z0-9]+)?( pn-[a-z0-9]+)?$/.test(n.className) || n.getAttribute('style')) return false;
     if (prev && prev.className === n.className) return false;
     prev = n;
   }
@@ -843,7 +862,7 @@ function clean() {
 
 /* ---------- editing operations ---------- */
 function deleteSelection() { document.execCommand('delete'); clean(); }
-function typingStyle(c) { return { c: c || mode, b: fmt.b, i: fmt.i, u: fmt.u }; }
+function typingStyle(c) { return { c: c || mode, b: fmt.b, i: fmt.i, u: fmt.u, x: sealTyping() ? 'l' : '' }; }
 function insertText(text) {
   let s = getSel(); if (!s) return;
   if (!collapsed(s)) { deleteSelection(); s = getSel(); if (!s) return; }
@@ -948,12 +967,14 @@ function snapText(h) { const d = document.createElement('div'); d.innerHTML = h;
 function flatPos(i) { const ps = paras(); for (let p = 0; p < ps.length; p++) { const L = textOf(ps[p]).length; if (i <= L) return { p, o: i }; i -= L + 1; } const l = ps.length - 1; return { p: l, o: textOf(ps[l]).length }; }
 // undo/redo count as edits: they have to pass the same edit rules and pay the same points
 function historyGate(x) {
-  const rOn = rulesActive(), pOn = ptsActive(); if (!rOn && !pOn) return true;
+  if (ed.querySelector('.xl')) { const d = document.createElement('div'); d.innerHTML = x.h; if (sealedCount(d) < sealedCount(ed)) { ruleToast("Undo can't unseal a sentence."); blip('n', true); return false; } }
+  const rOn = rulesActive(), pOn = ptsActive(); if (!rOn && !pOn && !ed.querySelector('.xl')) return true;
   const cur = paras().map(textOf).join('\n'), tgt = snapText(x.h);
   if (cur === tgt) return true;
   let i = 0; while (i < cur.length && i < tgt.length && cur[i] === tgt[i]) i++;
   let j = 0; while (j < cur.length - i && j < tgt.length - i && cur[cur.length - 1 - j] === tgt[tgt.length - 1 - j]) j++;
   const A = flatPos(i), B = flatPos(cur.length - j), ins = tgt.slice(i, tgt.length - j);
+  if (sealBlock(A, B)) { refuseSeal(); return false; }
   if (rOn && ruleBlock(A, B)) { ruleToast("Undo can't get around the edit rules."); blip('n', true); return false; }
   if (pOn && !ptsCharge(A, B, ins, false)) return false;
   return true;
@@ -1150,11 +1171,12 @@ function editRange(e) {
   return [s.f, s.f];
 }
 function ruleGate(e) {
-  const rOn = rulesActive(), pOn = ptsActive();
-  if (!rOn && !pOn) return false;
+  const rOn = rulesActive(), pOn = ptsActive(), sOn = !!ed.querySelector('.xl');
+  if (!rOn && !pOn && !sOn) return false;
   const t = e.inputType || '';
   if (!(t.startsWith('insert') || t.startsWith('delete'))) return false;
   const r = editRange(e); if (!r) return false;
+  if (sOn && sealBlock(r[0], r[1])) { refuseSeal(); return true; }
   if (rOn) {
     if (rw && !(r[0].p === rw.p && r[1].p === rw.p && r[0].o >= rw.s && r[1].o <= rw.e)) rw = null;
     const x = ruleBlock(r[0], r[1]);
@@ -1662,7 +1684,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ---------- share your setup (rules + colors) ---------- */
 $('setupExport').onclick = () => {
   const o = { stoplight: 'setup', version: 1, exported: new Date().toISOString(), colorMeanings: Object.assign({}, settings.desc), customPatterns: settings.customPatterns || [],
-    editRules: { on: settings.rulesOn !== false, r: rawRule('r'), y: rawRule('y'), g: rawRule('g') }, editPoints: { r: ptsCfg('r'), y: ptsCfg('y'), g: ptsCfg('g') }, rulePresets: settings.rulePresets || [] };
+    editRules: { on: settings.rulesOn !== false, r: rawRule('r'), y: rawRule('y'), g: rawRule('g') }, editPoints: { r: ptsCfg('r'), y: ptsCfg('y'), g: ptsCfg('g') }, sentenceTimers: { r: tmrCfg('r'), y: tmrCfg('y'), g: tmrCfg('g') }, rulePresets: settings.rulePresets || [] };
   lgDownload('Stoplight setup ' + dayKey(Date.now()) + '.json', JSON.stringify(o, null, 1));
 };
 $('setupImport').onclick = () => $('setupFile').click();
@@ -1671,17 +1693,96 @@ $('setupFile').addEventListener('change', async () => {
   let o; try { o = JSON.parse(await f.text()); } catch (e) { o = null; }
   if (!o || o.stoplight !== 'setup') { toast("That file isn't a Stoplight setup", true); return; }
   const locked = rulesLocked(), np = (o.rulePresets || []).length, nc = (o.customPatterns || []).length;
-  const what = locked ? 'color meanings and patterns (your rules are locked, so they stay as they are)' : 'color meanings, edit rules and points' + (np ? `, plus ${np} preset${np === 1 ? '' : 's'}` : '');
+  const what = locked ? 'color meanings and patterns (your rules are locked, so they stay as they are)' : 'color meanings, edit rules, points and timers' + (np ? `, plus ${np} preset${np === 1 ? '' : 's'}` : '');
   if ((await ask(`Import this setup? It replaces your ${what}${nc ? ` and adds ${nc} pattern${nc === 1 ? '' : 's'}` : ''}.`, [['cancel', 'Cancel'], ['ok', 'Import', true]])) !== 'ok') return;
   if (o.colorMeanings && typeof o.colorMeanings === 'object') { settings.desc = {}; for (const c of ['r', 'y', 'g']) if (typeof o.colorMeanings[c] === 'string') settings.desc[c] = o.colorMeanings[c].slice(0, 80); }
   if (Array.isArray(o.customPatterns)) { const have = settings.customPatterns || []; for (const p of o.customPatterns) { if (!p || !p.id || !Array.isArray(p.seq)) continue; const i = have.findIndex(x => x.id === p.id); if (i >= 0) have[i] = p; else have.push(p); } settings.customPatterns = have; }
   if (!locked) {
     if (o.editRules) { settings.rulesOn = o.editRules.on !== false; settings.rules = {}; for (const c of ['r', 'y', 'g']) if (o.editRules[c]) settings.rules[c] = o.editRules[c]; }
+    if (o.sentenceTimers) { settings.timers = {}; for (const c of ['r', 'y', 'g']) if (o.sentenceTimers[c]) settings.timers[c] = { on: !!o.sentenceTimers[c].on, secs: Math.max(5, Math.min(600, +o.sentenceTimers[c].secs || TMR_DEF[c].secs)) }; }
     if (o.editPoints) { settings.pts = {}; for (const c of ['r', 'y', 'g']) if (o.editPoints[c]) settings.pts[c] = Object.assign({}, PTS_DEF, o.editPoints[c]); settings.ptsBal = {}; }
     if (Array.isArray(o.rulePresets)) { const have = settings.rulePresets || []; for (const p of o.rulePresets) { if (!p || !p.id || !p.rules) continue; const i = have.findIndex(x => x.id === p.id); if (i >= 0) have[i] = p; else have.push(p); } settings.rulePresets = have; }
   }
   saveSettings(); fillDesc(); renderSeg(); renderPatList(); applySettings(); updateModeUI(false); toast('Setup imported.');
 });
+
+
+/* ---------- sentence timers ---------- */
+const TMR_DEF = { r: { on: false, secs: 20 }, y: { on: false, secs: 30 }, g: { on: false, secs: 60 } };
+const tmrCfg = c => Object.assign({}, TMR_DEF[c] || { on: false, secs: 30 }, settings.timers && settings.timers[c]);
+let tmr = null, sealOpen = null;
+function sealTyping() {
+  if (!sealOpen) return false;
+  const s = getSel(); if (!s || !collapsed(s)) return false;
+  return paras()[s.f.p] === sealOpen;
+}
+function sealSentence(pEl, at0) {
+  const pi = paras().indexOf(pEl); if (pi < 0) return null;
+  const { out } = sentSpans(pEl);
+  const x = out.find(q => at0 >= q.s && at0 < q.e) || out.find(q => q.s >= at0) || null;
+  if (!x) return null;
+  editChars(pi, (st, k) => k >= x.s && k < x.e && !st.x ? { ...st, x: 'l' } : st);
+  return { pi, x };
+}
+function stopTimer(timeUp) {
+  const t = tmr; if (!t) return;
+  clearInterval(t.tick); tmr = null; $('fuse').hidden = true;
+  const sel = getSel(), was = sel && { a: { ...sel.a }, f: { ...sel.f } };
+  const r = sealSentence(t.pEl, t.s);
+  if (was) setSel(clampSel(was));
+  if (!r) return;
+  if (timeUp) {
+    flashPara(paras()[r.pi]);
+    const s2 = getSel();
+    if (!r.x.done && s2 && collapsed(s2) && s2.f.p === r.pi && s2.f.o >= r.x.e - 1) sealOpen = t.pEl;
+    blip(t.c, false); toast(r.x.done ? 'Time’s up. That sentence is sealed.' : 'Time’s up. Finish the sentence, but no going back.');
+  }
+}
+function startTimer(c, pEl, at0) {
+  const secs = Math.max(5, Math.min(600, +tmrCfg(c).secs || 30));
+  tmr = { c, pEl, s: at0, until: Date.now() + secs * 1000, total: secs * 1000 };
+  const f = $('fuse'); f.hidden = false;
+  f.style.setProperty('--fc', COLHEX[c]); f.style.setProperty('--fcd', { r: '#c0392b', y: '#b8860b', g: '#2e8b45' }[c]);
+  const paint = () => {
+    if (!tmr) return;
+    const left = tmr.until - Date.now();
+    if (left <= 0) { stopTimer(true); return; }
+    const dk = $('desk').getBoundingClientRect();
+    f.style.left = dk.left + 'px'; f.style.top = dk.top + 'px'; f.style.width = dk.width + 'px';
+    const w = Math.max(0, left / tmr.total) * dk.width;
+    f.firstElementChild.style.width = w + 'px';
+    const b = f.lastElementChild, sec = Math.ceil(left / 1000);
+    b.textContent = sec >= 60 ? Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') : sec + 's';
+    b.style.left = Math.max(22, Math.min(dk.width - 22, w)) + 'px';
+    f.classList.toggle('low', left < 5000);
+  };
+  tmr.tick = setInterval(paint, 100); paint();
+}
+// called just before a character is typed
+function timerOnType(data) {
+  const s = getSel(); if (!s || !collapsed(s) || !/\S/.test(data)) return;
+  const before = textOf(paras()[s.f.p]).slice(0, s.f.o);
+  if (!(/^\s*$/.test(before) || TERM_SPACE.test(before))) return;
+  sealOpen = null;
+  if (tmr) stopTimer(false);
+  if (tmrCfg(mode).on && (mode === 'r' || mode === 'y' || mode === 'g')) startTimer(mode, paras()[s.f.p], s.f.o);
+}
+function sentenceEnded() { sealOpen = null; }
+document.addEventListener('selectionchange', () => { if (!sealOpen) return; const s = getSel(); if (s && paras()[s.f.p] !== sealOpen) sealOpen = null; });
+// sealed text can't change: no deleting into it, no typing inside it
+function sealBlock(A, B) {
+  const ps = paras(), ins = A.p === B.p && A.o === B.o;
+  for (let pi = A.p; pi <= B.p; pi++) {
+    const p = ps[pi]; if (!p || !p.querySelector('.xl')) continue;
+    const xs = []; for (const r of pToRuns(p)) for (let k = 0; k < r.t.length; k++) xs.push(r.x || '');
+    const a = pi === A.p ? A.o : 0, b = pi === B.p ? B.o : xs.length;
+    if (ins) { if (xs[a - 1] === 'l' && xs[a] === 'l') return true; continue; }
+    for (let k = a; k < b; k++) if (xs[k] === 'l') return true;
+  }
+  return false;
+}
+const sealedCount = root => { let n = 0; for (const e of root.querySelectorAll('.xl')) n += e.textContent.length; return n; };
+function refuseSeal() { ruleToast('That sentence is sealed.'); blip('n', true); }
 
 /* ---------- edit points ---------- */
 const PTS_DEF = { on: false, max: 50, rate: 1 };
@@ -1747,15 +1848,16 @@ ed.addEventListener('beforeinput', e => {
     const s = getSel(); if (!s) return;
     const x = collapsed(s) ? textOf(paras()[s.f.p]).slice(0, s.f.o) : '';
     pushUndo('type', e.data === ' ' || !collapsed(s));
+    timerOnType(e.data);
     insertText(e.data); typedSince += e.data.replace(/\s/g, '').length;
-    if (e.data === ' ' && TERM_END.test(x)) { sentenceDone(mode, x); advance(true); }
+    if (e.data === ' ' && TERM_END.test(x)) { sentenceDone(mode, x); advance(true); sentenceEnded(); }
     changed();
   } else if (t === 'insertParagraph' || t === 'insertLineBreak') {
     e.preventDefault();
     const s = getSel(); if (!s) return;
     const x = collapsed(s) ? textOf(paras()[s.f.p]).slice(0, s.f.o) : '';
     pushUndo('para', true);
-    splitPara();
+    splitPara(); sentenceEnded();
     if (TERM_END.test(x.trimEnd())) { sentenceDone(mode, x); advance(true); }
     changed();
   } else if (t === 'historyUndo') { e.preventDefault(); undo(); }
@@ -1779,10 +1881,11 @@ ed.addEventListener('paste', e => {
   e.preventDefault();
   const t = (e.clipboardData.getData('text/plain') || '').replace(/\r\n?/g, '\n');
   if (!t) return;
-  if (rulesActive() || ptsActive()) {
+  if (rulesActive() || ptsActive() || ed.querySelector('.xl')) {
     const s = getSel();
     if (s) {
       const [A, B] = ordered(s), rOn = rulesActive();
+      if (sealBlock(A, B)) { refuseSeal(); return; }
       if (rOn) { if (rw && !(A.p === rw.p && B.p === rw.p && A.o >= rw.s && B.o <= rw.e)) rw = null; const x = ruleBlock(A, B); if (x) { refuseEdit(x); return; } }
       if (ptsActive() && !ptsCharge(A, B, t, false)) return;
       if (rOn && ruleBlock.cover) rw = ruleBlock.cover;
@@ -1865,6 +1968,11 @@ function applySettings() {
   $('tRun').setAttribute('aria-checked', settings.runCards !== false);
   for (const b of $('seg').children) b.setAttribute('aria-pressed', b.dataset.p === settings.pattern);
   $('tRules').setAttribute('aria-checked', settings.rulesOn !== false);
+  for (const row of document.querySelectorAll('.trow')) {
+    const c = row.dataset.tc, cfg = tmrCfg(c), inp = row.querySelector('.tsec');
+    row.querySelector('.toggle').setAttribute('aria-checked', !!cfg.on); row.classList.toggle('off', !cfg.on);
+    if (document.activeElement !== inp) inp.value = cfg.secs;
+  }
   renderRulesUI();
   for (const row of document.querySelectorAll('.prow')) {
     const c = row.dataset.pc, cfg = ptsCfg(c);
@@ -3227,6 +3335,14 @@ for (const row of document.querySelectorAll('.prow')) {
     inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); });
     inp.addEventListener('change', () => { let v = parseInt(inp.value, 10); if (!(v >= lo)) v = PTS_DEF[k]; v = Math.min(hi, v); inp.value = v; setPts(c, { [k]: v }); });
   }
+}
+function setTmr(c, patch) { if (lockedNope()) { applySettings(); return; } settings.timers = Object.assign({}, settings.timers, { [c]: Object.assign(tmrCfg(c), patch) }); saveSettings(); applySettings(); }
+for (const row of document.querySelectorAll('.trow')) {
+  const c = row.dataset.tc, tg = row.querySelector('.toggle'), inp = row.querySelector('.tsec');
+  tg.addEventListener('mousedown', e => e.preventDefault());
+  tg.onclick = () => { setTmr(c, { on: !tmrCfg(c).on }); blip(c, true); };
+  inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); });
+  inp.addEventListener('change', () => { let v = parseInt(inp.value, 10); if (!(v >= 5)) v = TMR_DEF[c].secs; v = Math.min(600, v); inp.value = v; setTmr(c, { secs: v }); });
 }
 $('tRules').onclick = () => { if (lockedNope()) return; settings.rulesOn = settings.rulesOn === false; saveSettings(); applySettings(); blip('g', true); };
 for (const g of document.querySelectorAll('.eseg')) for (const b of g.children) { b.addEventListener('mousedown', e => e.preventDefault()); b.onclick = () => { if (lockedNope()) return; settings.rules = Object.assign({}, RULE_DEF, settings.rules, { [g.dataset.rc]: b.dataset.v }); saveSettings(); applySettings(); blip(g.dataset.rc, true); }; }
