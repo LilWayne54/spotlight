@@ -554,6 +554,26 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
 .lin{font-size:16px}
 .tray.horiz .traybody .rcard{left:12px;right:12px;width:auto;top:auto !important;bottom:calc(var(--sb) + 34px + var(--trayh,150px))}
 .tray.horiz .trayfoot button{min-width:30px}
+
+/* ---------- your colors ---------- */
+.housing.many{gap:6px}
+.housing.many .lamp{width:29px;height:29px}
+.housing.lots .lamp{width:24px;height:24px}
+@media (max-width:1600px){body.xc3 .modecap{display:none}}
+@media (max-width:1400px){body.xc1 .modecap span{display:none}body.xc1 .modecap{min-width:0}body.xc3 .housing{gap:4px;padding:5px 7px}body.xc3 .housing .lamp{width:21px;height:21px}}
+@media (max-width:1300px){body.xc1 .modecap{display:none}}
+@media (max-width:1240px){body.xc5 .housing .lamp{width:18px;height:18px}body.xc5 .housing{gap:3px}}
+@media (max-width:1100px){body.xc1 .housing{gap:4px;padding:5px 7px}body.xc1 .housing .lamp{width:22px;height:22px}body.xc3 .housing .lamp{width:18px;height:18px}body.xc3 .housing{gap:3px}body.xc3 .signal #bDare{display:none}}
+@media (max-width:1010px){body.xc5 .housing .lamp{width:15px;height:15px}body.xc3 .seg button[data-p="climb"],body.xc3 .seg button[data-p="leap"]{display:none}}
+@media (max-width:860px){body.xc1 .seg button[data-p="climb"],body.xc1 .seg button[data-p="leap"],body.xc1 .seg .segsep{display:none}body.xc5 #bLogT,body.xc5 #bPages{display:none}}
+.custrow{display:flex;align-items:center;gap:8px;margin:0 0 6px}
+.cswatch{position:relative;flex:none;width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.18),0 0 10px -2px var(--sw);cursor:pointer;overflow:hidden}
+.cswatch input{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);opacity:0;cursor:pointer;border:0;padding:0}
+.custrow .cname{flex:1;min-width:0;margin:0;padding:7px 10px;font-weight:700}
+.custrow .cdel{flex:none;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:var(--faint)}
+.custrow .cdel:hover{background:rgba(255,255,255,.08);color:#ff9a8a}
+.custmeaning{margin:0 0 12px 34px}
+.custmeaning textarea{width:100%}
 </style>
 </head>
 <body data-mode="r">
@@ -647,6 +667,10 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <div class="meaning"><i style="background:var(--Y)"></i><textarea id="dY" rows="1" maxlength="80" placeholder="trying · no bashing"></textarea></div>
   <div class="meaning"><i style="background:var(--G)"></i><textarea id="dG" rows="1" maxlength="80" placeholder="trying · bashing"></textarea></div>
   <div class="row" style="justify-content:flex-end;margin-top:-2px"><button class="linkbtn" id="dReset">Reset to defaults</button></div>
+  <h4 style="margin-top:4px">Your colors</h4>
+  <div id="custList"></div>
+  <div class="row" style="justify-content:flex-start;margin-top:2px"><button class="linkbtn" id="custAdd">+ Add a color</button></div>
+  <p class="ehint">Extra lights that work just like red, yellow and green: their own meaning, edit rules, points, timers, patterns and log colors. Up to six.</p>
   <h4 style="margin-top:4px">Edit rules</h4>
   <div class="lockrow" id="lockRow"></div>
   <div class="presets" id="presetRow"></div>
@@ -669,7 +693,7 @@ body.pindrag .doc span[class*=" pn-"]::after{transition:none}
   <p class="ehint">A gentle check-in, not a lock. When you start a sentence in a timed color, a fuse starts burning. If it runs out before you start the next sentence, you hear a soft chime: a nudge to ask whether you're still writing or just polishing. Nothing gets locked.</p>
   <h4 style="margin-top:4px">Share your setup</h4>
   <div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap"><button class="pchip" id="setupExport">Export rules &amp; colors…</button><button class="pchip" id="setupImport">Import…</button></div>
-  <p class="ehint">Saves your edit rules, points, timers, presets, color meanings and custom patterns to a file you can keep, share, or open on your other device.</p>
+  <p class="ehint">Saves your own colors, edit rules, points, timers, presets, color meanings and custom patterns to a file you can keep, share, or open on your other device.</p>
 </div>
 
 <div class="veil" id="veilDocs" hidden></div>
@@ -706,7 +730,7 @@ const isRand = id => !!RANDOMS[id || settings.pattern];
 let owed = null; // the color Random/Scramble picked for the next sentence; it sticks until that sentence is started
 function rollOwed() { if (!owed) owed = { c: rollColor(mode) }; return owed.c; }
 function rollColor(prev) {
-  const opts = settings.pattern === 'scramble' ? ['r', 'y', 'g'].filter(c => c !== prev) : ['r', 'y', 'g'];
+  const opts = settings.pattern === 'scramble' ? COLS().filter(c => c !== prev) : COLS();
   const a = new Uint32Array(1); crypto.getRandomValues(a);
   return opts[a[0] % opts.length];
 }
@@ -759,7 +783,7 @@ function pToRuns(p) {
       else if (ch.nodeType === 1) {
         if (ch.tagName === 'BR' || isBrk(ch)) continue;
         const s = { ...st }, cl = ch.classList, tg = ch.tagName;
-        for (const c of ['r', 'y', 'g', 'n']) if (cl.contains('c-' + c)) s.c = c;
+        for (const c of COLS().concat('n')) if (cl.contains('c-' + c)) s.c = c;
         for (const x of cl) { if (x.startsWith('k-')) s.k = x.slice(2); else if (x.startsWith('pn-')) s.pn = x.slice(3); }
         if (tg === 'B' || tg === 'STRONG' || cl.contains('b') || /^(bold|[6-9]00)$/.test(ch.style.fontWeight)) s.b = true;
         if (tg === 'I' || tg === 'EM' || cl.contains('i') || ch.style.fontStyle === 'italic') s.i = true;
@@ -786,7 +810,7 @@ function canonical(p) {
   for (const n of ch) {
     if (isBrk(n)) { prev = null; continue; }
     if (n.nodeName !== 'SPAN' || n.childNodes.length !== 1 || n.firstChild.nodeType !== 3 || !n.firstChild.data ||
-        /[​\r\n]/.test(n.firstChild.data) || !/^c-[rygn]( b)?( i)?( u)?( x[sal])?( k-[a-z0-9]+)?( pn-[a-z0-9]+)?$/.test(n.className) || n.getAttribute('style')) return false;
+        /[​\r\n]/.test(n.firstChild.data) || !/^c-[a-z]( b)?( i)?( u)?( x[sal])?( k-[a-z0-9]+)?( pn-[a-z0-9]+)?$/.test(n.className) || n.getAttribute('style')) return false;
     if (prev && prev.className === n.className) return false;
     prev = n;
   }
@@ -996,7 +1020,7 @@ function updateModeUI(pulse) {
   $('mName').textContent = NAMES[mode]; $('mDesc').textContent = descOf(mode);
   for (const b of document.querySelectorAll('.lamp')) b.title = NAMES[b.dataset.c] + ': ' + descOf(b.dataset.c);
   const nx = nextOf(mode);
-  $('next').innerHTML = isRand() ? `Next sentence: <b style="background:linear-gradient(90deg,#ff8a82,#ffd65c,#7fd88b);-webkit-background-clip:text;background-clip:text;color:transparent">${settings.pattern === 'scramble' ? 'anything but ' + NAMES[mode] : 'anyone’s guess'}</b>` : !patSeq() ? '' : `Next sentence: <b style="color:${{ r: '#ff8a82', y: '#ffd65c', g: '#7fd88b', n: '#ccc' }[nx]}">${NAMES[nx]}</b>`;
+  $('next').innerHTML = isRand() ? `Next sentence: <b style="background:linear-gradient(90deg,#ff8a82,#ffd65c,#7fd88b);-webkit-background-clip:text;background-clip:text;color:transparent">${settings.pattern === 'scramble' ? 'anything but ' + NAMES[mode] : 'anyone’s guess'}</b>` : !patSeq() ? '' : `Next sentence: <b style="color:${LIGHTC[nx] || '#ccc'}">${escH(NAMES[nx])}</b>`;
   if (settings.mode !== mode) { settings.mode = mode; saveSettings(); }
   placeFlagSoon();
 }
@@ -1108,7 +1132,7 @@ function toggleFmt(k) {
 /* ---------- edit rules ---------- */
 const RULE_DEF = { r: 'free', y: 'strike', g: 'free', n: 'free' };
 const ruleOf = c => { if (settings.rulesOn === false) return 'free'; const v = (settings.rules && settings.rules[c]) || RULE_DEF[c] || 'free'; return v === 'rewrite' ? 'strike' : v; };
-const rulesActive = () => settings.rulesOn !== false && ['r', 'y', 'g'].some(c => ruleOf(c) !== 'free');
+const rulesActive = () => settings.rulesOn !== false && COLS().some(c => ruleOf(c) !== 'free');
 function sentSpans(p) {
   const runs = pToRuns(p), cols = []; let txt = '';
   for (const r of runs) { txt += r.t; for (let k = 0; k < r.t.length; k++) cols.push(r.c); }
@@ -1246,7 +1270,7 @@ const RP_BUILTIN = [
   { id: 'steady', name: 'Steady', rules: { r: 'forward', y: 'strike', g: 'free' }, pts: { r: { on: false }, y: { on: true, max: 5, rate: 10 }, g: { on: false } } },
   { id: 'strict', name: 'Strict', rules: { r: 'forward', y: 'forward', g: 'strike' }, pts: { r: { on: false }, y: { on: false }, g: { on: true, max: 20, rate: 5 } } }
 ];
-const rawRule = c => { const v = (settings.rules && settings.rules[c]) || RULE_DEF[c]; return v === 'rewrite' ? 'strike' : v; };
+const rawRule = c => { const v = (settings.rules && settings.rules[c]) || RULE_DEF[c] || 'free'; return v === 'rewrite' ? 'strike' : v; };
 const rulesLocked = () => !!settings.ruleLock && Date.now() < settings.ruleLock;
 const fmtWhen = t => new Date(t).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 function lockedNope() { if (!rulesLocked()) return false; toast('Rules are locked until ' + fmtWhen(settings.ruleLock) + '.'); blip('n', true); return true; }
@@ -1260,8 +1284,9 @@ function presetMatches(pr) {
 function applyPreset(pr) {
   if (lockedNope()) return;
   settings.rulesOn = true;
-  settings.rules = Object.assign({}, pr.rules);
-  settings.pts = {}; for (const c of ['r', 'y', 'g']) settings.pts[c] = Object.assign({}, PTS_DEF, pr.pts[c]);
+  const keepR = {}, keepP = {}; for (const c of custC()) { if (settings.rules && settings.rules[c.id]) keepR[c.id] = settings.rules[c.id]; if (settings.pts && settings.pts[c.id]) keepP[c.id] = settings.pts[c.id]; }
+  settings.rules = Object.assign(keepR, pr.rules);
+  settings.pts = keepP; for (const c of ['r', 'y', 'g']) settings.pts[c] = Object.assign({}, PTS_DEF, pr.pts[c]);
   settings.ptsBal = {};
   saveSettings(); applySettings(); blip('g', true); toast('Using ' + pr.name + '.');
 }
@@ -1348,7 +1373,7 @@ let logOn = false, lgOpenEnt = null, lgOpenStory = null, lgShow = 30, lgFind = '
 function saveLg() { try { localStorage.setItem(LG_KEY, JSON.stringify(lg)); } catch (e) { toast("Couldn't save the log", true); } }
 const WRE = /[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu;
 function lgCounts() {
-  const o = { w: 0, r: 0, y: 0, g: 0 };
+  const o = { w: 0 }; for (const k of COLS()) o[k] = 0;
   for (const p of paras()) {
     let t = ''; const cs = [];
     for (const r of pToRuns(p)) { if (r.x === 's') { t += ' '; cs.push(''); continue; } t += r.t; for (let k = 0; k < r.t.length; k++) cs.push(r.c); }
@@ -1368,7 +1393,7 @@ function lgEnsure() {
 }
 function lgDelta() {
   const now = lgCounts(), b = lg.base[lgKey()] || now, d = {};
-  for (const c of ['w', 'r', 'y', 'g']) d[c] = Math.max(0, now[c] - (b[c] || 0));
+  for (const c of ['w'].concat(COLS())) d[c] = Math.max(0, (now[c] || 0) - (b[c] || 0));
   return { now, d };
 }
 const dayKey = t => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
@@ -1398,9 +1423,9 @@ function toggleLog(on) {
   paintLogBtn(); viewSet('log', logOn);
 }
 function lgCbar(c, h) {
-  const t = (c.r || 0) + (c.y || 0) + (c.g || 0);
+  const t = COLS().reduce((a, k) => a + (c[k] || 0), 0);
   if (!t) return `<div class="cbar"${h ? ` style="height:${h}px"` : ''}></div>`;
-  return `<div class="cbar"${h ? ` style="height:${h}px"` : ''}>` + ['r', 'y', 'g'].map(k => c[k] ? `<i style="flex-grow:${c[k]};background:${COLHEX[k]}"></i>` : '').join('') + '</div>';
+  return `<div class="cbar"${h ? ` style="height:${h}px"` : ''}>` + COLS().map(k => c[k] ? `<i style="flex-grow:${c[k]};background:${COLHEX[k]}"></i>` : '').join('') + '</div>';
 }
 function lgDownload(name, text, type) {
   const blob = new Blob([text], { type: type || 'application/json' });
@@ -1464,7 +1489,7 @@ function renderSess() {
   const K = KINDS[lg.kind] || KINDS.draft;
   let h = `<h5>Since your last log<span class="sp"></span><span style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--dim)">${escH(lgTitle())}</span></h5>` +
     `<div class="row1"><span class="n${d.w ? '' : ' zero'}">+${fmtN(d.w)}</span><small>new word${d.w === 1 ? '' : 's'} in this story</small></div>` +
-    lgCbar(d) + `<div class="cleg"><span><i style="background:${COLHEX.r}"></i>${fmtN(d.r)}</span><span><i style="background:${COLHEX.y}"></i>${fmtN(d.y)}</span><span><i style="background:${COLHEX.g}"></i>${fmtN(d.g)}</span></div>` +
+    lgCbar(d) + `<div class="cleg">${COLS().filter(k => BASE_C.includes(k) || d[k]).map(k => `<span title="${escH(NAMES[k])}"><i style="background:${COLHEX[k]}"></i>${fmtN(d[k])}</span>`).join('')}</div>` +
     `<div class="kchips" id="lgKinds">${Object.entries(KINDS).map(([k, v]) => `<button data-k="${k}" class="${lg.kind === k ? 'on' : ''}" style="--kc:${v[1]}">${v[0]}</button>`).join('')}</div>` +
     `<input class="lin" id="lgNote" maxlength="2000" placeholder="What did you work on? (optional)">` +
     `<button class="logbig" id="lgGo"${d.w ? '' : ' disabled'}>${d.w ? 'Log ' + fmtN(d.w) + ' word' + (d.w === 1 ? '' : 's') + ' as ' + K[0].toLowerCase() : 'Write something to log it'}</button>` +
@@ -1497,7 +1522,7 @@ function renderSess() {
 function lgLogNow() {
   const { now, d } = lgDelta(); if (!d.w) return;
   const before = lgToday(), note = $('lgNote') ? $('lgNote').value.trim() : '';
-  lg.entries.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: Date.now(), words: d.w, kind: lg.kind, project: lgTitle(), notes: note, cols: { r: d.r, y: d.y, g: d.g } });
+  lg.entries.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: Date.now(), words: d.w, kind: lg.kind, project: lgTitle(), notes: note, cols: Object.fromEntries(COLS().map(k => [k, d[k] || 0])) });
   lg.base[lgKey()] = now; saveLg();
   const after = lgToday(), metNow = lg.goal > 0 && before < lg.goal && after >= lg.goal;
   cheer(metNow); renderLog(); paintLogBtn();
@@ -1512,14 +1537,14 @@ function chartSVG() {
     const i = ix[dayKey(e.at)]; if (i === undefined) continue;
     const P = days[i].parts;
     if (lg.chart === 'color') {
-      const c = e.cols || {}, t = (c.r || 0) + (c.y || 0) + (c.g || 0);
-      if (t) { for (const k of ['r', 'y', 'g']) P[k] = (P[k] || 0) + Math.round((e.words || 0) * (c[k] || 0) / t); }
+      const c = e.cols || {}, ks = COLS().filter(k => c[k]), t = ks.reduce((a, k) => a + c[k], 0);
+      if (t) { for (const k of ks) P[k] = (P[k] || 0) + Math.round((e.words || 0) * c[k] / t); }
       else P.n = (P.n || 0) + (e.words || 0);
     } else { const k = KINDS[e.kind] ? e.kind : 'draft'; P[k] = (P[k] || 0) + (e.words || 0); }
   }
   const tot = days.map(x => Object.values(x.parts).reduce((a, b) => a + b, 0)), mx = Math.max(lg.goal || 0, ...tot, 1);
   const Yv = v => bot - (v / mx) * (bot - top);
-  const order = lg.chart === 'color' ? [['r', COLHEX.r], ['y', COLHEX.y], ['g', COLHEX.g], ['n', '#8a8178']] : Object.entries(KINDS).map(([k, v]) => [k, v[2]]);
+  const order = lg.chart === 'color' ? COLS().map(k => [k, COLHEX[k]]).concat([['n', '#8a8178']]) : Object.entries(KINDS).map(([k, v]) => [k, v[2]]);
   let g = `<svg viewBox="0 0 ${W} ${H}"><line class="gl" x1="0" x2="${W}" y1="${bot}" y2="${bot}"/>`;
   if (lg.goal) g += `<line x1="0" x2="${W}" y1="${Yv(lg.goal)}" y2="${Yv(lg.goal)}" stroke="#f27a1d" stroke-dasharray="3 4" opacity=".7"/><text class="gv" x="${W}" y="${Yv(lg.goal) - 3}" text-anchor="end" style="fill:#ff9a4a">goal</text>`;
   days.forEach((x, i) => {
@@ -1563,8 +1588,8 @@ function wireWords() {
   }
   $('lgCsv').onclick = () => {
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const rows = [['Date', 'Time', 'Words', 'Kind', 'Project', 'Red', 'Yellow', 'Green', 'Notes'].join(',')];
-    for (const e of lg.entries.slice().sort((a, b) => a.at - b.at)) { const d = new Date(e.at), c = e.cols || {}; rows.push([dayKey(e.at), d.toTimeString().slice(0, 5), e.words, (KINDS[e.kind] || KINDS.draft)[0], q(e.project), c.r ?? '', c.y ?? '', c.g ?? '', q(e.notes)].join(',')); }
+    const rows = [['Date', 'Time', 'Words', 'Kind', 'Project'].concat(COLS().map(k => q(NAMES[k])), ['Notes']).join(',')];
+    for (const e of lg.entries.slice().sort((a, b) => a.at - b.at)) { const d = new Date(e.at), c = e.cols || {}; rows.push([dayKey(e.at), d.toTimeString().slice(0, 5), e.words, (KINDS[e.kind] || KINDS.draft)[0], q(e.project)].concat(COLS().map(k => c[k] ?? ''), [q(e.notes)]).join(',')); }
     lgDownload('Stoplight words log ' + dayKey(Date.now()) + '.csv', rows.join('\r\n'), 'text/csv');
   };
   $('lgBack').onclick = lgBackup;
@@ -1688,7 +1713,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ---------- share your setup (rules + colors) ---------- */
 $('setupExport').onclick = () => {
   const o = { stoplight: 'setup', version: 1, exported: new Date().toISOString(), colorMeanings: Object.assign({}, settings.desc), customPatterns: settings.customPatterns || [],
-    editRules: { on: settings.rulesOn !== false, r: rawRule('r'), y: rawRule('y'), g: rawRule('g') }, editPoints: { r: ptsCfg('r'), y: ptsCfg('y'), g: ptsCfg('g') }, sentenceTimers: { r: tmrCfg('r'), y: tmrCfg('y'), g: tmrCfg('g') }, rulePresets: settings.rulePresets || [] };
+    customColors: custC(), editRules: Object.assign({ on: settings.rulesOn !== false }, Object.fromEntries(COLS().map(c => [c, rawRule(c)]))), editPoints: Object.fromEntries(COLS().map(c => [c, ptsCfg(c)])), sentenceTimers: Object.fromEntries(COLS().map(c => [c, tmrCfg(c)])), rulePresets: settings.rulePresets || [] };
   lgDownload('Stoplight setup ' + dayKey(Date.now()) + '.json', JSON.stringify(o, null, 1));
 };
 $('setupImport').onclick = () => $('setupFile').click();
@@ -1699,12 +1724,13 @@ $('setupFile').addEventListener('change', async () => {
   const locked = rulesLocked(), np = (o.rulePresets || []).length, nc = (o.customPatterns || []).length;
   const what = locked ? 'color meanings and patterns (your rules are locked, so they stay as they are)' : 'color meanings, edit rules, points and timers' + (np ? `, plus ${np} preset${np === 1 ? '' : 's'}` : '');
   if ((await ask(`Import this setup? It replaces your ${what}${nc ? ` and adds ${nc} pattern${nc === 1 ? '' : 's'}` : ''}.`, [['cancel', 'Cancel'], ['ok', 'Import', true]])) !== 'ok') return;
+  if (Array.isArray(o.customColors)) { const have = custC(); for (const c of o.customColors) { if (!c || !CID_POOL.includes(c.id) || !/^#[0-9a-f]{6}$/i.test(c.hex || '')) continue; const i = have.findIndex(x => x.id === c.id), v = { id: c.id, name: String(c.name || 'Color').slice(0, 16), hex: c.hex, desc: String(c.desc || '').slice(0, 80) }; if (i >= 0) have[i] = v; else if (have.length < 6) have.push(v); } settings.customColors = have; syncColors(); }
   if (o.colorMeanings && typeof o.colorMeanings === 'object') { settings.desc = {}; for (const c of ['r', 'y', 'g']) if (typeof o.colorMeanings[c] === 'string') settings.desc[c] = o.colorMeanings[c].slice(0, 80); }
   if (Array.isArray(o.customPatterns)) { const have = settings.customPatterns || []; for (const p of o.customPatterns) { if (!p || !p.id || !Array.isArray(p.seq)) continue; const i = have.findIndex(x => x.id === p.id); if (i >= 0) have[i] = p; else have.push(p); } settings.customPatterns = have; }
   if (!locked) {
-    if (o.editRules) { settings.rulesOn = o.editRules.on !== false; settings.rules = {}; for (const c of ['r', 'y', 'g']) if (o.editRules[c]) settings.rules[c] = o.editRules[c]; }
-    if (o.sentenceTimers) { settings.timers = {}; for (const c of ['r', 'y', 'g']) if (o.sentenceTimers[c]) settings.timers[c] = { on: !!o.sentenceTimers[c].on, secs: Math.max(5, Math.min(600, +o.sentenceTimers[c].secs || TMR_DEF[c].secs)) }; }
-    if (o.editPoints) { settings.pts = {}; for (const c of ['r', 'y', 'g']) if (o.editPoints[c]) settings.pts[c] = Object.assign({}, PTS_DEF, o.editPoints[c]); settings.ptsBal = {}; }
+    if (o.editRules) { settings.rulesOn = o.editRules.on !== false; settings.rules = {}; for (const c of COLS()) if (o.editRules[c]) settings.rules[c] = o.editRules[c]; }
+    if (o.sentenceTimers) { settings.timers = {}; for (const c of COLS()) if (o.sentenceTimers[c]) settings.timers[c] = { on: !!o.sentenceTimers[c].on, secs: Math.max(5, Math.min(600, +o.sentenceTimers[c].secs || (TMR_DEF[c] || { secs: 60 }).secs)) }; }
+    if (o.editPoints) { settings.pts = {}; for (const c of COLS()) if (o.editPoints[c]) settings.pts[c] = Object.assign({}, PTS_DEF, o.editPoints[c]); settings.ptsBal = {}; }
     if (Array.isArray(o.rulePresets)) { const have = settings.rulePresets || []; for (const p of o.rulePresets) { if (!p || !p.id || !p.rules) continue; const i = have.findIndex(x => x.id === p.id); if (i >= 0) have[i] = p; else have.push(p); } settings.rulePresets = have; }
   }
   saveSettings(); fillDesc(); renderSeg(); renderPatList(); applySettings(); updateModeUI(false); toast('Setup imported.');
@@ -1742,7 +1768,7 @@ function startTimer(c, pEl, at0) {
   const secs = Math.max(5, Math.min(600, +tmrCfg(c).secs || 30));
   tmr = { c, pEl, s: at0, until: Date.now() + secs * 1000, total: secs * 1000 };
   const f = $('fuse'); f.hidden = false;
-  f.style.setProperty('--fc', COLHEX[c]); f.style.setProperty('--fcd', { r: '#c0392b', y: '#b8860b', g: '#2e8b45' }[c]);
+  f.style.setProperty('--fc', COLHEX[c]); f.style.setProperty('--fcd', { r: '#c0392b', y: '#b8860b', g: '#2e8b45' }[c] || COLHEX[c]);
   const paint = () => {
     if (!tmr) return;
     const left = tmr.until - Date.now();
@@ -1765,7 +1791,7 @@ function timerOnType(data) {
   if (!(/^\s*$/.test(before) || TERM_SPACE.test(before))) return;
   owed = null; sealOpen = null;
   if (tmr) stopTimer(false);
-  if (tmrCfg(mode).on && (mode === 'r' || mode === 'y' || mode === 'g')) startTimer(mode, paras()[s.f.p], s.f.o);
+  if (tmrCfg(mode).on && isCol(mode)) startTimer(mode, paras()[s.f.p], s.f.o);
 }
 function sentenceEnded() { sealOpen = null; }
 document.addEventListener('selectionchange', () => { if (!sealOpen) return; const s = getSel(); if (s && paras()[s.f.p] !== sealOpen) sealOpen = null; });
@@ -1785,11 +1811,133 @@ function sealBlock(A, B) {
 const sealedCount = root => { let n = 0; for (const e of root.querySelectorAll('.xl')) n += e.textContent.length; return n; };
 function refuseSeal() { ruleToast('That sentence is sealed.'); blip('n', true); }
 
+
+/* ---------- your colors: extra lights beside red, yellow and green ---------- */
+const BASE_C = ['r', 'y', 'g'];
+const CID_POOL = 'abcdefhijkmopqstvw'.split('');
+const custC = () => (Array.isArray(settings.customColors) ? settings.customColors : []).filter(c => c && CID_POOL.includes(c.id) && /^#[0-9a-f]{6}$/i.test(c.hex || ''));
+const COLS = () => BASE_C.concat(custC().map(c => c.id));
+const isCol = c => COLS().includes(c);
+const LIGHTC = { r: '#ff8a82', y: '#ffd65c', g: '#7fd88b', n: '#ccc' };
+const CUST_PALETTE = [['Blue', '#5b9bd5'], ['Purple', '#a678d6'], ['Orange', '#f08a3c'], ['Teal', '#3fb8b3'], ['Pink', '#e46fae'], ['Brown', '#9a7258']];
+function hexMix(hex, to, t) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), a = p(hex), b = p(to.length === 4 ? '#' + to[1] + to[1] + to[2] + to[2] + to[3] + to[3] : to);
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+function syncColors(keepList) {
+  const cs = custC();
+  for (const o of [NAMES, DESC, COLHEX, FILL, FLAGC, FLAGL, PIPC, LIGHTC]) for (const k of Object.keys(o)) if (!['r', 'y', 'g', 'n'].includes(k)) delete o[k];
+  let css = '';
+  for (const c of cs) {
+    const hex = c.hex.toLowerCase();
+    NAMES[c.id] = (c.name || '').trim() || 'Color'; DESC[c.id] = (c.desc || '').trim() || 'your own color';
+    COLHEX[c.id] = hex; FILL[c.id] = hexMix(hex, '#ffffff', .58).slice(1).toUpperCase(); FLAGC[c.id] = hexMix(hex, '#000000', .06);
+    FLAGL[c.id] = (NAMES[c.id].match(/[\p{L}\p{N}]/u) || ['•'])[0].toUpperCase(); PIPC[c.id] = hex; LIGHTC[c.id] = hexMix(hex, '#ffffff', .35);
+    css += `.lamp.cl-${c.id}{--lc:${hex}}body[data-mode="${c.id}"] .modecap b{color:${LIGHTC[c.id]}}.doc .c-${c.id}{background:#${FILL[c.id]}}.plain .doc .c-${c.id}{background:none}body[data-mode="${c.id}"] #ed{caret-color:${hexMix(hex, '#000000', .25)}}body[data-mode="${c.id}"]{--mc:${hex}}`;
+  }
+  let st = $('custStyle'); if (!st) { st = document.createElement('style'); st.id = 'custStyle'; document.head.appendChild(st); }
+  st.textContent = css;
+  // lights in the housing, after green
+  const hz = document.querySelector('.housing'), gl = hz && hz.querySelector('.lamp.g');
+  if (hz && gl) {
+    for (const b of hz.querySelectorAll('.lamp.cust')) b.remove();
+    let after = gl;
+    cs.forEach((c, i) => {
+      const b = document.createElement('button'); b.className = 'lamp cust cl-' + c.id; b.dataset.c = c.id;
+      b.title = NAMES[c.id] + ': ' + DESC[c.id];
+      tap(b, () => { if (document.activeElement !== ed && !pagesOn) ed.focus(); setMode(b.dataset.c, { click: true }); });
+      after.after(b); after = b;
+    });
+    hz.classList.toggle('many', cs.length > 0 && cs.length <= 2); hz.classList.toggle('lots', cs.length > 2);
+    document.body.classList.toggle('xc1', cs.length >= 1); document.body.classList.toggle('xc3', cs.length >= 3); document.body.classList.toggle('xc5', cs.length >= 5);
+  }
+  // a row for each of your colors in edit rules, points and timers
+  const clone = (sel, attr, wire) => {
+    const tpl = document.querySelector(sel); if (!tpl) return;
+    const box = tpl.parentNode, cls = sel.split('[')[0];
+    for (const r of box.querySelectorAll(':scope > ' + cls + '[data-cust]')) r.remove();
+    let after = tpl;
+    while (after.nextElementSibling && after.nextElementSibling.matches(cls)) after = after.nextElementSibling;
+    for (const c of cs) {
+      const r = tpl.cloneNode(true); r.dataset.cust = c.id;
+      const tgt = r.matches('[' + attr + ']') ? r : r.querySelector('[' + attr + ']'); tgt.setAttribute(attr, c.id);
+      const dot = r.querySelector(':scope > i'); if (dot) dot.style.background = c.hex;
+      after.after(r); after = r; wire(r, c.id);
+    }
+  };
+  clone('.erow', 'data-rc', (r, id) => {
+    for (const b of r.querySelectorAll('.eseg button')) { b.addEventListener('mousedown', e => e.preventDefault()); b.onclick = () => { if (lockedNope()) return; settings.rules = Object.assign({}, RULE_DEF, settings.rules, { [id]: b.dataset.v }); saveSettings(); applySettings(); blip(id, true); }; }
+  });
+  clone('.prow', 'data-pc', (r, id) => {
+    const tg = r.querySelector('.toggle'); tg.addEventListener('mousedown', e => e.preventDefault());
+    tg.onclick = () => { if (lockedNope()) return; const on = !ptsCfg(id).on; if (on) setBal(id, ptsCfg(id).max); setPts(id, { on }); blip(id, true); };
+    for (const [sel, k, lo, hi] of [['.pmax', 'max', 1, 9999], ['.prate', 'rate', 1, 99]]) {
+      const inp = r.querySelector(sel);
+      inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); });
+      inp.addEventListener('change', () => { let v = parseInt(inp.value, 10); if (!(v >= lo)) v = PTS_DEF[k]; v = Math.min(hi, v); inp.value = v; setPts(id, { [k]: v }); });
+    }
+  });
+  clone('.trow', 'data-tc', (r, id) => {
+    const tg = r.querySelector('.toggle'), inp = r.querySelector('.tsec'); tg.addEventListener('mousedown', e => e.preventDefault());
+    tg.onclick = () => { setTmr(id, { on: !tmrCfg(id).on }); blip(id, true); };
+    inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => { let v = parseInt(inp.value, 10); if (!(v >= 5)) v = 60; v = Math.min(600, v); inp.value = v; setTmr(id, { secs: v }); });
+  });
+  if (!keepList) renderCustList();
+}
+function renderCustList() {
+  const box = $('custList'); if (!box) return;
+  box.textContent = '';
+  for (const c of custC()) {
+    const row = document.createElement('div'); row.className = 'custrow';
+    row.innerHTML = `<label class="cswatch" style="background:${c.hex};--sw:${c.hex}" title="Pick a color"><input type="color" value="${c.hex}"></label><input class="lin cname" maxlength="16" placeholder="Name"><button class="cdel" title="Delete this color">✕</button>`;
+    const nm = row.querySelector('.cname'); nm.value = c.name || '';
+    const mean = document.createElement('div'); mean.className = 'meaning custmeaning';
+    mean.innerHTML = `<textarea rows="1" maxlength="80" placeholder="What does ${escH(c.name || 'this color')} mean?"></textarea>`;
+    const ta = mean.querySelector('textarea'); ta.value = c.desc || '';
+    const upd = patch => { Object.assign(c, patch); saveSettings(); syncColors(true); applySettings(); updateModeUI(false); renderSeg(); tally(); };
+    const pick = row.querySelector('input[type=color]');
+    pick.addEventListener('input', () => { row.firstElementChild.style.background = pick.value; row.firstElementChild.style.setProperty('--sw', pick.value); upd({ hex: pick.value }); });
+    nm.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') nm.blur(); });
+    nm.addEventListener('input', () => upd({ name: nm.value.trim() || 'Color' }));
+    ta.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') e.preventDefault(); });
+    ta.addEventListener('input', () => { grow(ta); upd({ desc: ta.value }); });
+    row.querySelector('.cdel').onclick = () => deleteCust(c);
+    box.appendChild(row); box.appendChild(mean); requestAnimationFrame(() => grow(ta));
+  }
+  $('custAdd').hidden = custC().length >= 6;
+}
+function addCust() {
+  if (lockedNope()) return;
+  const cs = custC(); if (cs.length >= 6) { toast('Six colors of your own is the most.'); return; }
+  const id = CID_POOL.find(x => !cs.some(c => c.id === x));
+  const used = new Set(cs.map(c => c.hex.toLowerCase())), pal = CUST_PALETTE.find(p => !used.has(p[1])) || CUST_PALETTE[cs.length % CUST_PALETTE.length];
+  settings.customColors = cs.concat([{ id, name: pal[0], hex: pal[1], desc: '' }]);
+  saveSettings(); syncColors(); applySettings(); updateModeUI(false); renderSeg(); tally(); blip(id, true);
+  const last = $('custList').querySelector('.custrow:last-of-type .cname'); if (last) { last.focus(); last.select(); }
+}
+async function deleteCust(c) {
+  if (lockedNope()) return;
+  const n = [...ed.querySelectorAll('.c-' + c.id)].reduce((a, e) => a + e.textContent.length, 0);
+  if ((await ask(`Delete ${c.name || 'this color'}?${n ? ` Its text in this story turns into plain text.` : ''}`, [['cancel', 'Cancel'], ['del', 'Delete', true]])) !== 'del') return;
+  settings.customColors = custC().filter(x => x.id !== c.id);
+  for (const k of ['rules', 'pts', 'timers', 'desc', 'ptsBal']) if (settings[k] && typeof settings[k] === 'object') delete settings[k][c.id];
+  for (const p of settings.customPatterns || []) p.seq = p.seq.filter(x => x !== c.id);
+  syncColors();
+  if (n) { pushUndo('style', true); const sel = getSel(); for (const p of paras()) render(p, pToRuns(p)); if (sel) setSel(clampSel(sel)); changed(); }
+  if (mode === c.id) mode = 'r';
+  if (owed && owed.c === c.id) owed = null;
+  saveSettings(); applySettings(); updateModeUI(false); renderSeg(); renderPatList(); renderLane(false); tally();
+  toast((c.name || 'Color') + ' deleted.');
+}
+$('custAdd').addEventListener('mousedown', e => e.preventDefault());
+$('custAdd').onclick = addCust;
+
 /* ---------- edit points ---------- */
 const PTS_DEF = { on: false, max: 50, rate: 1 };
 const ptsCfg = c => Object.assign({}, PTS_DEF, settings.pts && settings.pts[c]);
-const ptsOn = c => (c === 'r' || c === 'y' || c === 'g') && !!ptsCfg(c).on;
-const ptsActive = () => ['r', 'y', 'g'].some(ptsOn);
+const ptsOn = c => isCol(c) && !!ptsCfg(c).on;
+const ptsActive = () => COLS().some(ptsOn);
 const bal = c => { const b = settings.ptsBal && settings.ptsBal[c]; return Math.min(typeof b === 'number' ? b : ptsCfg(c).max, ptsCfg(c).max); };
 let ptsAcc = { r: 0, y: 0, g: 0 }, ptsSaveT = 0;
 function setBal(c, v) { settings.ptsBal = Object.assign({}, settings.ptsBal, { [c]: Math.max(0, Math.min(ptsCfg(c).max, v)) }); clearTimeout(ptsSaveT); ptsSaveT = setTimeout(saveSettings, 800); }
@@ -1820,7 +1968,7 @@ function ptsCharge(A, B, ins, earnable) {
   if (isIns && ins) { const p = paras()[A.p]; if (p) for (const x of sentSpans(p).out) if (A.o > x.s && A.o < x.e) inside = x; }
   if (inside) cost[inside.c] = (cost[inside.c] || 0) + [...ins].length;
   const need = {};
-  for (const c of ['r', 'y', 'g']) if (cost[c] && ptsOn(c)) need[c] = cost[c];
+  for (const c of COLS()) if (cost[c] && ptsOn(c)) need[c] = cost[c];
   for (const c in need) if (bal(c) < need[c]) {
     const h = Math.floor(bal(c)), nm = NAMES[c].toLowerCase();
     ruleToast(h ? `That needs ${need[c]} ${nm} point${need[c] > 1 ? 's' : ''}. You have ${h}.` : `Out of ${nm} points. Write more ${nm} to earn some.`);
@@ -1933,14 +2081,13 @@ function baseName(p) { return (p || '').split(/[\\/]/).pop().replace(/\.docx$/i,
 function setDirty(v) { dirty = v; if (v) $('saved').textContent = ''; }
 function tally() {
   try { if (!viewBoot) { lgEnsure(); logSoon(); } } catch (e) {}
-  const c = { r: 0, y: 0, g: 0 };
-  for (const s of ed.querySelectorAll('span:not(.xs)')) { const m = /c-([ryg])/.exec(s.className); if (m) c[m[1]] += s.textContent.replace(/\s/g, '').length; }
-  const tot = c.r + c.y + c.g, el = $('tally');
+  const cols = COLS(), c = {}; for (const k of cols) c[k] = 0;
+  for (const s of ed.querySelectorAll('span:not(.xs)')) { const m = /\bc-([a-z])\b/.exec(s.className); if (m && m[1] in c) c[m[1]] += s.textContent.replace(/\s/g, '').length; }
+  const tot = cols.reduce((a, k) => a + c[k], 0), el = $('tally');
   const pct = k => tot ? Math.round(c[k] / tot * 100) : 0;
-  el.children[0].style.width = (tot ? c.r / tot * 100 : 0) + '%';
-  el.children[1].style.width = (tot ? c.y / tot * 100 : 0) + '%';
-  el.children[2].style.width = (tot ? c.g / tot * 100 : 0) + '%';
-  el.title = tot ? `Red ${pct('r')}% · Yellow ${pct('y')}% · Green ${pct('g')}%` : 'Your color mix shows up here';
+  if (el.children.length !== cols.length || [...el.children].some((x, i) => x.dataset.k !== cols[i])) { el.textContent = ''; for (const k of cols) { const i = document.createElement('i'); i.dataset.k = k; i.style.background = COLHEX[k]; el.appendChild(i); } }
+  cols.forEach((k, i) => { el.children[i].style.width = (tot ? c[k] / tot * 100 : 0) + '%'; });
+  el.title = tot ? cols.filter(k => c[k]).map(k => `${NAMES[k]} ${pct(k)}%`).join(' · ') : 'Your color mix shows up here';
   showCounts(); schedulePages();
   stripUnknownAnchors(); $('cmBadge').textContent = cmOrder().length || '';
   if (!$('cmPanel').hidden && !$('cmPanel').contains(document.activeElement)) renderComments();
@@ -1999,7 +2146,7 @@ function blip(c, soft) {
   if (!settings.sound) return;
   try {
     actx = actx || new AudioContext();
-    const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain(), f = { r: 262, y: 330, g: 392, n: 440 }[c] || 330;
+    const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain(), f = { r: 262, y: 330, g: 392, n: 440 }[c] || ([494, 523, 587, 659, 698, 784][custC().findIndex(x => x.id === c)] || 330);
     o.type = 'triangle';
     o.frequency.setValueAtTime(f * 1.6, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.07);
     g.gain.setValueAtTime(soft ? 0.03 : 0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
@@ -2026,6 +2173,7 @@ function colorOf(rPr) {
   const hl = wval(child(rPr, 'highlight'));
   if (hl) { if (/red/i.test(hl)) return 'r'; if (/yellow/i.test(hl)) return 'y'; if (/green/i.test(hl)) return 'g'; }
   const shd = child(rPr, 'shd'), fill = shd && (shd.getAttributeNS(W, 'fill') || shd.getAttribute('w:fill'));
+  if (fill) { const F = String(fill).toUpperCase(); for (const cc of custC()) if (FILL[cc.id] === F) return cc.id; }
   const x = hueOf(fill);
   if (x && x.s > 0.2 && x.l < 0.96 && x.l > 0.12) {
     if (x.h <= 22 || x.h >= 335) return 'r';
@@ -2621,7 +2769,7 @@ function editPattern(id) {
   m.innerHTML = `<p style="margin-bottom:12px;font-weight:600">${ex ? 'Edit pattern' : 'New pattern'}</p>
     <label class="lbl2">Name</label><input class="pname" maxlength="24" placeholder="My pattern">
     <label class="lbl2">Colors, in order</label><div class="seqview"></div>
-    <div class="adders"><button class="add" data-a="r" style="background:var(--R)" title="Add red"></button><button class="add" data-a="y" style="background:var(--Y)" title="Add yellow"></button><button class="add" data-a="g" style="background:var(--G)" title="Add green"></button><button class="add pn-dot" data-a="n" title="Add no color"></button><button class="back">⌫ Undo</button></div>
+    <div class="adders"><button class="add" data-a="r" style="background:var(--R)" title="Add red"></button><button class="add" data-a="y" style="background:var(--Y)" title="Add yellow"></button><button class="add" data-a="g" style="background:var(--G)" title="Add green"></button>${custC().map(c => `<button class="add" data-a="${c.id}" style="background:${c.hex}" title="Add ${escH(c.name)}"></button>`).join('')}<button class="add pn-dot" data-a="n" title="Add no color"></button><button class="back">⌫ Undo</button></div>
     <p class="tiny">Tap the colors to build the cycle. Tap a dot above to remove it. Each new sentence moves one step.</p>
     <div class="btns">${ex ? '<button class="del">Delete</button>' : ''}<button class="cancel">Cancel</button><button class="main ok">Save</button></div>`;
   v.appendChild(m); document.body.appendChild(v);
@@ -3300,6 +3448,7 @@ tap($('bEye'), () => { settings.colors = !settings.colors; saveSettings(); apply
 tap($('bPages'), () => togglePages());
 
 $('bAa').onclick = () => { const open = $('pop').hidden; closeDocs(); $('pop').hidden = !open; $('veilPop').hidden = !open; $('bAa').setAttribute('aria-pressed', open); for (const id of ['dR', 'dY', 'dG']) grow($(id)); };
+$('bAa').addEventListener('click', () => requestAnimationFrame(() => { for (const t of document.querySelectorAll('.custmeaning textarea')) grow(t); }));
 $('veilPop').onclick = () => closePop();
 $('bDocs').onclick = () => { closePop(); openDocs(); };
 $('veilDocs').onclick = () => closeDocs();
@@ -3395,6 +3544,7 @@ document.addEventListener('keydown', e => {
   if (!e.shiftKey && !e.altKey && code === 'Digit1') return hit(() => setMode('r', { click: true }));
   if (!e.shiftKey && !e.altKey && code === 'Digit2') return hit(() => setMode('y', { click: true }));
   if (!e.shiftKey && !e.altKey && code === 'Digit3') return hit(() => setMode('g', { click: true }));
+  { const m4 = !e.shiftKey && !e.altKey && /^Digit([4-9])$/.exec(code), cc = m4 && custC()[+m4[1] - 4]; if (cc) return hit(() => setMode(cc.id, { click: true })); }
   if (!e.shiftKey && !e.altKey && code === 'Digit0') return hit(() => setMode('n', { click: true }));
   if (!e.shiftKey && k === 'b') return hit(() => toggleFmt('b'));
   if (!e.shiftKey && k === 'i') return hit(() => toggleFmt('i'));
@@ -3428,7 +3578,8 @@ addEventListener('pagehide', () => { if (dirty) saveCurrent(true); });
   renderSeg(); renderPatList();
   if (!(settings.zoom >= 0.5 && settings.zoom <= 3)) settings.zoom = 1;
   if (!FONTS.includes(settings.font)) settings.font = 'Georgia';
-  mode = ['r', 'y', 'g', 'n'].includes(settings.mode) ? settings.mode : 'r';
+  syncColors();
+  mode = COLS().concat('n').includes(settings.mode) ? settings.mode : 'r';
   if (!settings.desc || typeof settings.desc !== 'object') settings.desc = {};
   fillDesc();
   applySettings(); applyZoom();
